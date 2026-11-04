@@ -77,9 +77,15 @@ webhookRouter.post('/aws-alarm', async (req: Request, res: Response): Promise<vo
     // Save incident to store
     const incident = incidentStore.saveIncident(alertPayload, source, alarmName);
 
-    // If request asks for auto-handoff
+    // Auto-handoff to Gargi's engine by default for live alarms or if requested
     let handoffResult = undefined;
-    if (req.query.autoHandoff === 'true' || body.autoHandoff === true) {
+    const shouldHandoff =
+      req.query.autoHandoff === 'true' ||
+      body.autoHandoff === true ||
+      source === 'cloudwatch' ||
+      source === 'eventbridge';
+
+    if (shouldHandoff && body.autoHandoff !== false) {
       handoffResult = await handoffToGargiEngine(alertPayload);
       incidentStore.updateHandoffStatus(alertPayload.incidentId, handoffResult);
     }

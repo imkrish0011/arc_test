@@ -114,6 +114,12 @@ export class CloudTrailCollector {
   ): CloudTrailEventEntry | null {
     if (!e.EventId) return null;
 
+    // Filter out read-only / poll events so Gargi receives clean infrastructure mutations
+    const READ_ONLY_PREFIXES = ['Describe', 'Get', 'List', 'Lookup', 'BatchGet', 'Search', 'Check'];
+    if (e.EventName && READ_ONLY_PREFIXES.some(prefix => e.EventName?.startsWith(prefix))) {
+      return null;
+    }
+
     let requestParameters: Record<string, unknown> = {};
     let parsedIdentity = e.Username || 'aws-system';
 
