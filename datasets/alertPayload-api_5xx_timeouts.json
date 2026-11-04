@@ -1,0 +1,159 @@
+{
+  "incidentId": "inc-api-5xx-timeouts-mw1tbd2a",
+  "triggeredAt": "2026-11-04T07:45:50.050Z",
+  "activeAlarms": [
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:alb-api-5xx-rate",
+      "alarmName": "ALB-High-HTTP-5XXError-Rate",
+      "nodeId": "node-alb-02",
+      "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-gateway-alb/987654",
+      "metricName": "HTTPCode_Target_5XX_Count",
+      "metricValue": 1420,
+      "threshold": 50,
+      "timestamp": "2026-11-04T07:43:50.050Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:alb-target-response-time",
+      "alarmName": "ALB-TargetResponseTime-Exceeded",
+      "nodeId": "node-alb-02",
+      "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-gateway-alb/987654",
+      "metricName": "TargetResponseTime",
+      "metricValue": 3450.8,
+      "threshold": 3000,
+      "timestamp": "2026-11-04T07:42:50.050Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:asg-max-capacity-capped",
+      "alarmName": "ASG-GroupInServiceInstances-MaxCapacity",
+      "nodeId": "node-lambda-02",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:CheckoutServiceFunction",
+      "metricName": "ConcurrentExecutions",
+      "metricValue": 1000,
+      "threshold": 1000,
+      "timestamp": "2026-11-04T07:41:50.050Z"
+    }
+  ],
+  "cloudWatchLogs30m": [
+    {
+      "timestamp": "2026-11-04T07:25:50.050Z",
+      "nodeId": "node-lambda-02",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:CheckoutServiceFunction",
+      "level": "WARN",
+      "message": "Slow response from upstream CartTransactions table query (duration: 2780ms)"
+    },
+    {
+      "timestamp": "2026-11-04T07:31:50.050Z",
+      "nodeId": "node-lambda-02",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:CheckoutServiceFunction",
+      "level": "TIMEOUT",
+      "message": "Task timed out after 3.00 seconds. Function: CheckoutServiceFunction, RequestId: 4f1a2b3c-5d6e-7f8a-9b0c-1d2e3f4a5b6c"
+    },
+    {
+      "timestamp": "2026-11-04T07:35:50.050Z",
+      "nodeId": "node-lambda-02",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:CheckoutServiceFunction",
+      "level": "TIMEOUT",
+      "message": "Task timed out after 3.00 seconds. Function: CheckoutServiceFunction, RequestId: 8a7b6c5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d"
+    },
+    {
+      "timestamp": "2026-11-04T07:38:50.050Z",
+      "nodeId": "node-alb-02",
+      "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-gateway-alb/987654",
+      "level": "ERROR",
+      "message": "HTTP 504 Gateway Timeout: Target did not respond within timeout window of 3000ms. Client: 192.0.2.14"
+    },
+    {
+      "timestamp": "2026-11-04T07:42:50.050Z",
+      "nodeId": "node-cf-01",
+      "awsResourceId": "arn:aws:cloudfront::123456789012:distribution/EDFDVBD6EXAMPLE",
+      "level": "ERROR",
+      "message": "CloudFront Origin Error: 504 Gateway Timeout received from Origin alb-api-gateway-alb-987654.us-east-1.elb.amazonaws.com"
+    }
+  ],
+  "cloudTrailEvents60m": [
+    {
+      "eventId": "trail-evt-f4a5b6c7-8901-4234-def0-123456789abc",
+      "eventTime": "2026-11-04T06:55:50.050Z",
+      "eventName": "PutScalingPolicy",
+      "awsResourceId": "arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:checkout-asg",
+      "userIdentity": "infrastructure-cd-pipeline",
+      "requestParameters": {
+        "autoScalingGroupName": "checkout-asg",
+        "policyName": "scale-on-target-tracking",
+        "targetTrackingConfiguration": {
+          "targetValue": 80,
+          "predefinedMetricSpecification": {
+            "predefinedMetricType": "ASGAverageCPUUtilization"
+          }
+        },
+        "maxCapacity": 10
+      }
+    }
+  ],
+  "canvasGraph": {
+    "nodes": [
+      {
+        "id": "node-cf-01",
+        "type": "cloudFront",
+        "awsResourceId": "arn:aws:cloudfront::123456789012:distribution/EDFDVBD6EXAMPLE",
+        "data": {
+          "label": "Global CDN (CloudFront)",
+          "category": "network",
+          "icon": "globe",
+          "healthStatus": "warning"
+        }
+      },
+      {
+        "id": "node-alb-02",
+        "type": "alb",
+        "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-gateway-alb/987654",
+        "data": {
+          "label": "Public API Load Balancer",
+          "category": "network",
+          "icon": "network",
+          "healthStatus": "critical"
+        }
+      },
+      {
+        "id": "node-lambda-02",
+        "type": "lambda",
+        "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:CheckoutServiceFunction",
+        "data": {
+          "label": "Checkout Lambda Handler",
+          "category": "compute",
+          "icon": "cpu",
+          "timeoutSeconds": 3,
+          "healthStatus": "critical"
+        }
+      },
+      {
+        "id": "node-dynamo-01",
+        "type": "dynamodb",
+        "awsResourceId": "arn:aws:dynamodb:us-east-1:123456789012:table/CartTransactions",
+        "data": {
+          "label": "CartTransactions DynamoDB",
+          "category": "storage",
+          "icon": "database",
+          "healthStatus": "healthy"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-cf-to-alb",
+        "source": "node-cf-01",
+        "target": "node-alb-02"
+      },
+      {
+        "id": "edge-alb-to-lambda",
+        "source": "node-alb-02",
+        "target": "node-lambda-02"
+      },
+      {
+        "id": "edge-lambda-to-dynamo",
+        "source": "node-lambda-02",
+        "target": "node-dynamo-01"
+      }
+    ]
+  }
+}

@@ -1,0 +1,148 @@
+{
+  "incidentId": "inc-container-crashloop-mw1tbd28",
+  "triggeredAt": "2026-11-04T07:45:50.048Z",
+  "activeAlarms": [
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:ecs-service-tasks-crashing",
+      "alarmName": "ECS-Task-StopCount-Exceeded",
+      "nodeId": "node-ecs-01",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "metricName": "ContainerCrashCount",
+      "metricValue": 7,
+      "threshold": 3,
+      "timestamp": "2026-11-04T07:43:50.048Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:alb-unhealthy-host-count",
+      "alarmName": "ALB-UnHealthyHostCount-Spike",
+      "nodeId": "node-alb-01",
+      "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/k8s-ingress-alb/1a2b3c",
+      "metricName": "UnHealthyHostCount",
+      "metricValue": 5,
+      "threshold": 1,
+      "timestamp": "2026-11-04T07:42:50.048Z"
+    }
+  ],
+  "cloudWatchLogs30m": [
+    {
+      "timestamp": "2026-11-04T07:31:50.048Z",
+      "nodeId": "node-ecs-01",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "level": "WARN",
+      "message": "V8 Garbage Collection high duration: Scavenge took 1840ms, memory heap limit approaching 512MB"
+    },
+    {
+      "timestamp": "2026-11-04T07:34:50.048Z",
+      "nodeId": "node-ecs-01",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "level": "FATAL",
+      "message": "<--- Last few GCs ---> [1:0x55a29f8c] 498 MB: Mark-sweep (reduce) 498.2 (512.0) MB: allocation failure; JavaScript heap out of memory"
+    },
+    {
+      "timestamp": "2026-11-04T07:36:50.048Z",
+      "nodeId": "node-ecs-01",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "level": "ERROR",
+      "message": "Essential container in task exited with Exit Code 137 (OutOfMemoryError) - Process terminated by Linux kernel OOM-killer"
+    },
+    {
+      "timestamp": "2026-11-04T07:39:50.048Z",
+      "nodeId": "node-ecs-01",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "level": "ERROR",
+      "message": "Task container payment-auth-v2 stop code: EssentialContainerExited, Exit Code 137 (OutOfMemoryError)"
+    },
+    {
+      "timestamp": "2026-11-04T07:42:50.048Z",
+      "nodeId": "node-alb-01",
+      "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/k8s-ingress-alb/1a2b3c",
+      "level": "ERROR",
+      "message": "Target.FailedHealthChecks: Registered target 10.0.12.84:8080 failed 3 consecutive HTTP /health checks (Status: 502 Bad Gateway)"
+    }
+  ],
+  "cloudTrailEvents60m": [
+    {
+      "eventId": "trail-evt-c1d2e3f4-5678-4901-abcd-ef0123456789",
+      "eventTime": "2026-11-04T07:20:50.048Z",
+      "eventName": "RegisterTaskDefinition",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:task-definition/payment-auth-service:48",
+      "userIdentity": "github-actions-cd-bot",
+      "requestParameters": {
+        "family": "payment-auth-service",
+        "cpu": "512",
+        "memory": "512",
+        "containerDefinitions": [
+          {
+            "name": "payment-auth",
+            "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/payment:v2.14.0",
+            "memoryReservation": 384
+          }
+        ]
+      }
+    },
+    {
+      "eventId": "trail-evt-d2e3f4a5-6789-4012-bcde-f0123456789a",
+      "eventTime": "2026-11-04T07:23:50.048Z",
+      "eventName": "UpdateService",
+      "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+      "userIdentity": "github-actions-cd-bot",
+      "requestParameters": {
+        "cluster": "production-cluster",
+        "service": "payment-auth-service",
+        "taskDefinition": "payment-auth-service:48",
+        "forceNewDeployment": true
+      }
+    }
+  ],
+  "canvasGraph": {
+    "nodes": [
+      {
+        "id": "node-alb-01",
+        "type": "alb",
+        "awsResourceId": "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/k8s-ingress-alb/1a2b3c",
+        "data": {
+          "label": "Core Ingress ALB",
+          "category": "network",
+          "icon": "network",
+          "healthStatus": "warning"
+        }
+      },
+      {
+        "id": "node-ecs-01",
+        "type": "ecs",
+        "awsResourceId": "arn:aws:ecs:us-east-1:123456789012:service/production-cluster/payment-auth-service",
+        "data": {
+          "label": "Payment Auth Microservice (ECS/EKS)",
+          "category": "compute",
+          "icon": "box",
+          "desiredCount": 6,
+          "runningCount": 1,
+          "healthStatus": "critical"
+        }
+      },
+      {
+        "id": "node-elasticache-01",
+        "type": "elasticache",
+        "awsResourceId": "arn:aws:elasticache:us-east-1:123456789012:cluster:redis-session-store",
+        "data": {
+          "label": "Redis Session Store",
+          "category": "storage",
+          "icon": "database",
+          "healthStatus": "healthy"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-alb-to-ecs",
+        "source": "node-alb-01",
+        "target": "node-ecs-01"
+      },
+      {
+        "id": "edge-ecs-to-redis",
+        "source": "node-ecs-01",
+        "target": "node-elasticache-01"
+      }
+    ]
+  }
+}

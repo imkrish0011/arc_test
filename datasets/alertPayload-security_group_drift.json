@@ -1,0 +1,145 @@
+{
+  "incidentId": "inc-security-group-drift-mw1tbd29",
+  "triggeredAt": "2026-11-04T07:45:50.049Z",
+  "activeAlarms": [
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:config-restricted-common-ports",
+      "alarmName": "AWSConfig-Rule-Restricted-Common-Ports-Drift",
+      "nodeId": "node-sg-01",
+      "awsResourceId": "sg-0a1b2c3d4e5f67890",
+      "metricName": "ComplianceType",
+      "metricValue": 1,
+      "threshold": 0,
+      "timestamp": "2026-11-04T07:41:50.049Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:guardduty-unauthorized-access-portscan",
+      "alarmName": "GuardDuty-Recon-EC2-Portscan",
+      "nodeId": "node-sg-01",
+      "awsResourceId": "sg-0a1b2c3d4e5f67890",
+      "metricName": "FindingCount",
+      "metricValue": 14,
+      "threshold": 1,
+      "timestamp": "2026-11-04T07:43:50.049Z"
+    }
+  ],
+  "cloudWatchLogs30m": [
+    {
+      "timestamp": "2026-11-04T07:27:50.049Z",
+      "nodeId": "node-sg-01",
+      "awsResourceId": "sg-0a1b2c3d4e5f67890",
+      "level": "WARN",
+      "message": "VPC Flow Logs: ACCEPT TCP 198.51.100.42:51234 -> 10.0.5.12:22 [SSH handshake initiated from unverified external CIDR]"
+    },
+    {
+      "timestamp": "2026-11-04T07:34:50.049Z",
+      "nodeId": "node-sg-01",
+      "awsResourceId": "sg-0a1b2c3d4e5f67890",
+      "level": "WARN",
+      "message": "VPC Flow Logs: ACCEPT TCP 203.0.113.88:49210 -> 10.0.5.12:5432 [PostgreSQL handshake initiated from external internet]"
+    },
+    {
+      "timestamp": "2026-11-04T07:37:50.049Z",
+      "nodeId": "node-db-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:customer-pii-database",
+      "level": "ERROR",
+      "message": "pg_hba.conf rejected: no pg_hba.conf entry for host \"203.0.113.88\", user \"postgres\", database \"customer_pii\", SSL off"
+    },
+    {
+      "timestamp": "2026-11-04T07:40:50.049Z",
+      "nodeId": "node-db-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:customer-pii-database",
+      "level": "FATAL",
+      "message": "FATAL: password authentication failed for user \"postgres\" from client 203.0.113.88: brute-force dictionary attempt detected"
+    }
+  ],
+  "cloudTrailEvents60m": [
+    {
+      "eventId": "trail-evt-e3f4a5b6-7890-4123-cdef-0123456789ab",
+      "eventTime": "2026-11-04T07:17:50.049Z",
+      "eventName": "AuthorizeSecurityGroupIngress",
+      "awsResourceId": "sg-0a1b2c3d4e5f67890",
+      "userIdentity": "arn:aws:iam::123456789012:user/developer-quickfix-role",
+      "requestParameters": {
+        "groupId": "sg-0a1b2c3d4e5f67890",
+        "ipPermissions": [
+          {
+            "ipProtocol": "tcp",
+            "fromPort": 22,
+            "toPort": 22,
+            "ipRanges": [
+              {
+                "cidrIp": "0.0.0.0/0",
+                "description": "Emergency SSH debug - remove immediately"
+              }
+            ]
+          },
+          {
+            "ipProtocol": "tcp",
+            "fromPort": 5432,
+            "toPort": 5432,
+            "ipRanges": [
+              {
+                "cidrIp": "0.0.0.0/0",
+                "description": "Temporary DB access for test"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "canvasGraph": {
+    "nodes": [
+      {
+        "id": "node-internet-gw",
+        "type": "internetGateway",
+        "awsResourceId": "igw-0987654321fedcba0",
+        "data": {
+          "label": "Public Internet Gateway (0.0.0.0/0)",
+          "category": "boundary",
+          "icon": "globe",
+          "healthStatus": "healthy"
+        }
+      },
+      {
+        "id": "node-sg-01",
+        "type": "securityGroup",
+        "awsResourceId": "sg-0a1b2c3d4e5f67890",
+        "data": {
+          "label": "Database Security Group (sg-db-prod)",
+          "category": "security",
+          "icon": "shield-alert",
+          "insecurePortsOpen": [
+            22,
+            5432
+          ],
+          "healthStatus": "critical"
+        }
+      },
+      {
+        "id": "node-db-01",
+        "type": "rds",
+        "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:customer-pii-database",
+        "data": {
+          "label": "Customer PII Database",
+          "category": "storage",
+          "icon": "database",
+          "healthStatus": "critical"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-igw-to-sg",
+        "source": "node-internet-gw",
+        "target": "node-sg-01"
+      },
+      {
+        "id": "edge-sg-to-db",
+        "source": "node-sg-01",
+        "target": "node-db-01"
+      }
+    ]
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "incidentId": "inc-finops-idle-waste-mw1tbd2b",
+  "triggeredAt": "2026-11-04T07:45:50.051Z",
+  "activeAlarms": [
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:finops-ebs-zero-iops-7days",
+      "alarmName": "FinOps-EBS-Zero-IOPS-Unattached",
+      "nodeId": "node-ebs-01",
+      "awsResourceId": "vol-09a8bc7d6e5f4a123",
+      "metricName": "VolumeTotalReadWriteOps",
+      "metricValue": 0,
+      "threshold": 0,
+      "timestamp": "2026-11-04T07:40:50.051Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:finops-natgw-zero-bytes-destination",
+      "alarmName": "FinOps-NATGW-Idle-BytesOutZero",
+      "nodeId": "node-nat-01",
+      "awsResourceId": "nat-01ab23cd45ef67890",
+      "metricName": "BytesOutToDestination",
+      "metricValue": 0,
+      "threshold": 0,
+      "timestamp": "2026-11-04T07:37:50.051Z"
+    }
+  ],
+  "cloudWatchLogs30m": [
+    {
+      "timestamp": "2026-11-04T07:20:50.051Z",
+      "nodeId": "node-ebs-01",
+      "awsResourceId": "vol-09a8bc7d6e5f4a123",
+      "level": "WARN",
+      "message": "AWS Cost Anomaly Detection: Anomaly detected on EBS Provisioned IOPS Volume vol-09a8bc7d6e5f4a123. Unattached for 168 consecutive hours ($125.00/mo waste)."
+    },
+    {
+      "timestamp": "2026-11-04T07:27:50.051Z",
+      "nodeId": "node-nat-01",
+      "awsResourceId": "nat-01ab23cd45ef67890",
+      "level": "WARN",
+      "message": "AWS Trusted Advisor Notification: Idle NAT Gateway nat-01ab23cd45ef67890 processed 0 bytes in the past 7 days while incurring hourly base fee ($32.40/mo waste)."
+    },
+    {
+      "timestamp": "2026-11-04T07:40:50.051Z",
+      "nodeId": "node-ebs-01",
+      "awsResourceId": "vol-09a8bc7d6e5f4a123",
+      "level": "WARN",
+      "message": "FinOps Metric Alert: Resource state remains \"available\" (unattached). Immediate remediation candidate: Take final snapshot and delete volume."
+    }
+  ],
+  "cloudTrailEvents60m": [
+    {
+      "eventId": "trail-evt-05a6b7c8-9012-4345-ef01-23456789abcd",
+      "eventTime": "2026-11-04T06:47:50.051Z",
+      "eventName": "DetachVolume",
+      "awsResourceId": "vol-09a8bc7d6e5f4a123",
+      "userIdentity": "arn:aws:iam::123456789012:user/qa-tester",
+      "requestParameters": {
+        "volumeId": "vol-09a8bc7d6e5f4a123",
+        "instanceId": "i-0987654321fedcba0",
+        "device": "/dev/xvdf",
+        "force": false
+      }
+    }
+  ],
+  "canvasGraph": {
+    "nodes": [
+      {
+        "id": "node-nat-01",
+        "type": "natGateway",
+        "awsResourceId": "nat-01ab23cd45ef67890",
+        "data": {
+          "label": "Orphaned Staging NAT Gateway",
+          "category": "network",
+          "icon": "network",
+          "bytesOut7Days": 0,
+          "hourlyCost": 0.045,
+          "healthStatus": "warning"
+        }
+      },
+      {
+        "id": "node-ebs-01",
+        "type": "ebs",
+        "awsResourceId": "vol-09a8bc7d6e5f4a123",
+        "data": {
+          "label": "Unattached io2 EBS Volume (500GB)",
+          "category": "storage",
+          "icon": "hard-drive",
+          "status": "available",
+          "activeIops7Days": 0,
+          "monthlyWasteCost": 125,
+          "healthStatus": "warning"
+        }
+      },
+      {
+        "id": "node-vpc-legacy",
+        "type": "vpc",
+        "awsResourceId": "vpc-0e7d4c2b1a9f8e3d0",
+        "data": {
+          "label": "Decommissioned Staging VPC",
+          "category": "boundary",
+          "icon": "box",
+          "healthStatus": "warning"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-vpc-to-nat",
+        "source": "node-vpc-legacy",
+        "target": "node-nat-01"
+      },
+      {
+        "id": "edge-vpc-to-ebs",
+        "source": "node-vpc-legacy",
+        "target": "node-ebs-01"
+      }
+    ]
+  }
+}

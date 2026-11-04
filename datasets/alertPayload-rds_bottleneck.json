@@ -1,0 +1,178 @@
+{
+  "incidentId": "inc-rds-bottleneck-mw1tbd27",
+  "triggeredAt": "2026-11-04T07:45:50.045Z",
+  "activeAlarms": [
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:rds-aurora-cpu-exhaustion",
+      "alarmName": "RDS-High-CPU-Utilization",
+      "nodeId": "node-rds-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "metricName": "CPUUtilization",
+      "metricValue": 96.4,
+      "threshold": 90,
+      "timestamp": "2026-11-04T07:43:50.045Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:rds-aurora-conn-saturation",
+      "alarmName": "RDS-DatabaseConnections-Exceeded",
+      "nodeId": "node-rds-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "metricName": "DatabaseConnections",
+      "metricValue": 498,
+      "threshold": 450,
+      "timestamp": "2026-11-04T07:42:50.045Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:lambda-order-error-cascading",
+      "alarmName": "Lambda-Order-Error-Rate-High",
+      "nodeId": "node-lambda-01",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:OrderProcessingService",
+      "metricName": "Errors",
+      "metricValue": 312,
+      "threshold": 10,
+      "timestamp": "2026-11-04T07:44:50.045Z"
+    },
+    {
+      "alarmId": "arn:aws:cloudwatch:us-east-1:123456789012:alarm:apigw-order-5xx-spike",
+      "alarmName": "ApiGateway-5XXError-Threshold",
+      "nodeId": "node-apigw-01",
+      "awsResourceId": "arn:aws:apigateway:us-east-1::/restapis/agw-prod-order/stages/prod",
+      "metricName": "5XXError",
+      "metricValue": 48.2,
+      "threshold": 5,
+      "timestamp": "2026-11-04T07:44:50.045Z"
+    }
+  ],
+  "cloudWatchLogs30m": [
+    {
+      "timestamp": "2026-11-04T07:27:50.045Z",
+      "nodeId": "node-rds-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "level": "WARN",
+      "message": "checkpoint starting: time"
+    },
+    {
+      "timestamp": "2026-11-04T07:33:50.045Z",
+      "nodeId": "node-rds-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "level": "WARN",
+      "message": "Connection pool saturation at 92% (460/500 client connections allocated)"
+    },
+    {
+      "timestamp": "2026-11-04T07:38:50.045Z",
+      "nodeId": "node-rds-01",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "level": "FATAL",
+      "message": "FATAL: remaining connection slots are reserved for non-replication superuser connections"
+    },
+    {
+      "timestamp": "2026-11-04T07:40:50.045Z",
+      "nodeId": "node-lambda-01",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:OrderProcessingService",
+      "level": "ERROR",
+      "message": "SequelizeConnectionAcquireTimeoutError: Operation timeout: Unable to acquire connection from pool within 10000ms"
+    },
+    {
+      "timestamp": "2026-11-04T07:42:50.045Z",
+      "nodeId": "node-lambda-01",
+      "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:OrderProcessingService",
+      "level": "TIMEOUT",
+      "message": "Task timed out after 15.01 seconds while executing checkout transaction"
+    },
+    {
+      "timestamp": "2026-11-04T07:43:50.045Z",
+      "nodeId": "node-apigw-01",
+      "awsResourceId": "arn:aws:apigateway:us-east-1::/restapis/agw-prod-order/stages/prod",
+      "level": "ERROR",
+      "message": "Execution failed due to configuration error: Gateway Timeout (504) on integration Lambda invocation"
+    }
+  ],
+  "cloudTrailEvents60m": [
+    {
+      "eventId": "trail-evt-88a7b1c2-d3e4-4f50-98a7-0123456789ab",
+      "eventTime": "2026-11-04T07:03:50.045Z",
+      "eventName": "ModifyDBParameterGroup",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:pg:aurora-pg-custom-params",
+      "userIdentity": "devops-automation-pipeline",
+      "requestParameters": {
+        "dBParameterGroupName": "aurora-pg-custom-params",
+        "parameters": [
+          {
+            "parameterName": "max_connections",
+            "parameterValue": "{DBInstanceClassMemory/31457280}",
+            "applyMethod": "immediate"
+          },
+          {
+            "parameterName": "statement_timeout",
+            "parameterValue": "15000",
+            "applyMethod": "immediate"
+          }
+        ]
+      }
+    },
+    {
+      "eventId": "trail-evt-99b8c2d3-e4f5-5a61-09b8-1234567890cd",
+      "eventTime": "2026-11-04T07:10:50.045Z",
+      "eventName": "RebootDBInstance",
+      "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+      "userIdentity": "devops-lead-user",
+      "requestParameters": {
+        "dBInstanceIdentifier": "aurora-pg-orders-primary",
+        "forceFailover": false
+      }
+    }
+  ],
+  "canvasGraph": {
+    "nodes": [
+      {
+        "id": "node-apigw-01",
+        "type": "apiGateway",
+        "awsResourceId": "arn:aws:apigateway:us-east-1::/restapis/agw-prod-order/stages/prod",
+        "data": {
+          "label": "Order API Gateway",
+          "category": "network",
+          "icon": "network",
+          "instances": 1,
+          "healthStatus": "warning"
+        }
+      },
+      {
+        "id": "node-lambda-01",
+        "type": "lambda",
+        "awsResourceId": "arn:aws:lambda:us-east-1:123456789012:function:OrderProcessingService",
+        "data": {
+          "label": "Order Lambda Service",
+          "category": "compute",
+          "icon": "cpu",
+          "instances": 25,
+          "healthStatus": "critical"
+        }
+      },
+      {
+        "id": "node-rds-01",
+        "type": "rds",
+        "awsResourceId": "arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary",
+        "data": {
+          "label": "Aurora Postgres Orders DB",
+          "category": "storage",
+          "icon": "database",
+          "instances": 1,
+          "engine": "aurora-postgresql",
+          "healthStatus": "critical"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge-agw-to-lambda",
+        "source": "node-apigw-01",
+        "target": "node-lambda-01"
+      },
+      {
+        "id": "edge-lambda-to-rds",
+        "source": "node-lambda-01",
+        "target": "node-rds-01"
+      }
+    ]
+  }
+}

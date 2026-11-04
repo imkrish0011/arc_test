@@ -6,3 +6,4 @@ dist/
 coverage/
 archviz-aws-discovery.json
 alertPayload-*.json
+!datasets/alertPayload-*.json
