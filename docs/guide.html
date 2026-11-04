@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ArchViz Autonomous — Platform Integration & Telemetry Pipeline Manual</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 16mm 14mm 16mm 14mm;
+      @bottom-right {
+        content: counter(page);
+        font-size: 8pt;
+        color: #64748b;
+      }
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #0f172a;
+      background-color: #ffffff;
+      line-height: 1.55;
+      font-size: 9.5pt;
+    }
+
+    .cover-header {
+      background: linear-gradient(135deg, #090d16 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 24px 28px;
+      border-radius: 12px;
+      margin-bottom: 22px;
+      border: 1px solid #334155;
+    }
+
+    .cover-badge {
+      display: inline-block;
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 3px 10px;
+      border-radius: 9999px;
+      font-size: 7.5pt;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .cover-title {
+      font-size: 19pt;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 6px;
+      letter-spacing: -0.02em;
+    }
+
+    .cover-title span {
+      color: #38bdf8;
+    }
+
+    .cover-subtitle {
+      font-size: 9.5pt;
+      color: #94a3b8;
+      margin-bottom: 14px;
+    }
+
+    .team-bar {
+      display: flex;
+      gap: 18px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 8pt;
+    }
+
+    .team-member {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .team-role {
+      color: #94a3b8;
+      font-size: 7pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .team-name {
+      color: #f8fafc;
+      font-weight: 700;
+    }
+
+    h2 {
+      font-size: 13.5pt;
+      font-weight: 800;
+      color: #0f172a;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 5px;
+      margin-top: 22px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    h3 {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 9px;
+      color: #334155;
+      text-align: justify;
+    }
+
+    .callout {
+      background: #f0fdf4;
+      border-left: 4px solid #16a34a;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 9pt;
+      color: #166534;
+    }
+
+    .callout-blue {
+      background: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      color: #075985;
+    }
+
+    .callout-amber {
+      background: #fffbeb;
+      border-left: 4px solid #d97706;
+      color: #92400e;
+    }
+
+    .callout-title {
+      font-weight: 800;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 3px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 11px;
+    }
+
+    .card-title {
+      font-size: 8.5pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .card-text {
+      font-size: 8pt;
+      color: #64748b;
+      line-height: 1.45;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 8pt;
+    }
+
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 7px 10px;
+      text-align: left;
+      font-weight: 700;
+      border: 1px solid #0f172a;
+    }
+
+    td {
+      padding: 7px 10px;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+      color: #334155;
+    }
+
+    tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    code {
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+      font-size: 7.8pt;
+      background: #f1f5f9;
+      color: #0369a1;
+      padding: 1.5px 4.5px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+    }
+
+    pre {
+      background: #090d16;
+      color: #38bdf8;
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+      font-size: 7.5pt;
+      padding: 10px 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 10px 0;
+      line-height: 1.5;
+      border: 1px solid #1e293b;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 1.5px 5.5px;
+      border-radius: 4px;
+      font-size: 6.8pt;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-family: monospace;
+    }
+
+    .badge-red { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .badge-green { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge-blue { background: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
+    .badge-purple { background: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe; }
+
+    .page-break {
+      page-break-after: always;
+    }
+
+    .flow-step {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 9px;
+    }
+
+    .step-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #0284c7;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 8pt;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .step-content {
+      font-size: 8.5pt;
+    }
+
+    .step-content strong {
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Cover Header -->
+  <div class="cover-header">
+    <div class="cover-badge">Engineering Reference & Specification</div>
+    <div class="cover-title">ArchViz Autonomous: <span>24/7 Cloud Engineer Agent</span></div>
+    <div class="cover-subtitle">Complete Architecture, Telemetry Pipeline, Handoff Contracts & 12-Week Execution Roadmap</div>
+    <div class="team-bar">
+      <div class="team-member">
+        <span class="team-role">Platform Integration Lead</span>
+        <span class="team-name">Krish (AWS Ingestion & Pipeline)</span>
+      </div>
+      <div class="team-member">
+        <span class="team-role">AI Lead 1: Diagnostics & RCA</span>
+        <span class="team-name">Gargi (Root-Cause Engine)</span>
+      </div>
+      <div class="team-member">
+        <span class="team-role">AI Lead 2: Remediation & Safety</span>
+        <span class="team-name">Sweta (Terraform & Simulator)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: IN SHORT -->
+  <h2>1. The Big Picture: What We Are Building ("In Short")</h2>
+  
+  <p>
+    <strong>ArchViz</strong> started as a modern visual cloud design tool that lets engineers draw cloud architectures on an interactive canvas, test latency and costs, and deploy infrastructure via Terraform.
+  </p>
+  
+  <p>
+    <strong>ArchViz Autonomous</strong> is the next-generation evolution: an <strong>autonomous 24/7 AI Cloud Engineer</strong> that continuously monitors customer AWS infrastructure. If a database maxes out on connections, a container enters a crash loop, a security group is left open to the world, or an API begins timing out, the system automatically detects the incident, finds the exact root cause, writes a verified Terraform fix, and alerts the user with a single <strong>[Approve & Apply Fix]</strong> button.
+  </p>
+
+  <div class="grid-3">
+    <div class="card" style="border-top: 3px solid #0284c7;">
+      <div class="card-title">1. Krish's Engine (YOU)</div>
+      <div class="card-text">
+        <strong>Platform Integration & Telemetry:</strong> Connects to the user's AWS account, catches alarms, collects 30m CloudWatch logs + 60m CloudTrail events, attaches the visual Canvas Graph, and hands it over.
+      </div>
+    </div>
+    <div class="card" style="border-top: 3px solid #8b5cf6;">
+      <div class="card-title">2. Gargi's Engine</div>
+      <div class="card-text">
+        <strong>Diagnostic AI (RCA):</strong> Deduplicates cascading alarms, uses RAG over 25 AWS troubleshooting runbooks, pinpoints the root failing resource, and computes confidence score (0-100%).
+      </div>
+    </div>
+    <div class="card" style="border-top: 3px solid #10b981;">
+      <div class="card-title">3. Sweta's Engine</div>
+      <div class="card-text">
+        <strong>Remediation & Safety:</strong> Takes Gargi's diagnosis, writes the Terraform code diff + AWS SDK command, passes 3-Gate safety checks, and runs pre-flight latency/cost simulations.
+      </div>
+    </div>
+  </div>
+
+  <div class="callout callout-blue">
+    <div class="callout-title">Krish's Clear Boundary</div>
+    Your responsibility is strictly <strong>getting the real logs and events from the user's AWS account</strong> and delivering a clean, standardized data packet to Gargi. You do not write Gargi's diagnostic prompts or Sweta's Terraform fix code. You build the robust highway that delivers live AWS truth into their AI modules.
+  </div>
+
+  <!-- SECTION 2: WHAT WE HAVE DONE -->
+  <h2>2. What We Have Built & Delivered ("In Detail")</h2>
+
+  <p>
+    All your code has been cleanly packaged and verified in the new standalone repository: <code>C:\Users\kumar\OneDrive\Desktop\ArchViz_Autonomous</code>.
+  </p>
+
+  <div class="flow-step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <strong>Dynamic Multi-Tenant AWS Account Access (<code>src/aws/credentials.ts</code>):</strong><br>
+      Users can authenticate either via direct IAM keys (<code>AWS_ACCESS_KEY_ID</code> / <code>AWS_SECRET_ACCESS_KEY</code>) or via enterprise cross-account <strong>STS AssumeRole</strong> (<code>RoleArn</code> + <code>ExternalId</code>). The system creates temporary 15-minute read-only sessions with zero credentials permanently stored.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <strong>24/7 Autonomous Alarm Webhook Listener (<code>src/api/webhooks.ts</code>):</strong><br>
+      An HTTP endpoint <code>POST /api/webhooks/aws-alarm</code> that receives alerts from AWS EventBridge, CloudWatch Alarm state changes, AWS SNS topic notifications, or direct API triggers whenever an outage begins.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <strong>Intelligent Log Group Auto-Discovery (<code>src/collector/cloudWatchCollector.ts</code>):</strong><br>
+      Instead of guessing, the collector inspects the failing AWS resource ARN and probes the user's AWS account using <code>DescribeLogGroups</code> for Lambda (<code>/aws/lambda/*</code>), RDS (<code>/aws/rds/instance/*</code>), ECS (<code>/ecs/*</code>), and API Gateway (<code>API-Gateway-Execution-Logs_*</code>), ensuring it finds real logs on live AWS accounts.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <strong>Trailing 30-Minute CloudWatch Log Pre-Filter (<code>src/collector/logFilter.ts</code>):</strong><br>
+      CloudWatch logs are full of noise (<code>[INFO] Application started</code>, <code>GET /health 200 OK</code>, heartbeats). Your pre-filter strips out all noise lines and extracts only <code>ERROR</code>, <code>FATAL</code>, <code>WARN</code>, and <code>TIMEOUT</code> lines to keep Gargi's LLM context clean and cost-effective.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+      <strong>Trailing 60-Minute CloudTrail Configuration Lookups (<code>src/collector/cloudTrailCollector.ts</code>):</strong><br>
+      Queries AWS CloudTrail for the trailing 60 minutes to uncover recent deployments and administrative changes (e.g., <code>AuthorizeSecurityGroupIngress</code>, <code>ModifyDBParameterGroup</code>, <code>RegisterTaskDefinition</code>, <code>UpdateService</code>). It extracts user identities and full JSON request parameters.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">6</div>
+    <div class="step-content">
+      <strong>ArchViz Canvas Graph Topology Attachment (<code>src/types/canvasGraph.ts</code>):</strong><br>
+      Attaches the user's architecture diagram topology (all <code>nodes</code> with <code>id</code>, <code>type</code>, <code>awsResourceId</code>, and <code>edges</code> with <code>source</code> and <code>target</code>). The resource indexer maps failing AWS resource ARNs directly to Canvas Node IDs so Gargi can trace upstream/downstream connections.
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 3: THE 5 TEST SCENARIOS -->
+  <h2>3. The 5 Pre-Built Target Failure Scenarios (For Offline Verification)</h2>
+
+  <p>
+    To allow Gargi and Sweta to develop and test their code offline without needing live AWS outages, your generator (<code>src/generator/sampleOutageGenerator.ts</code>) produces full test payloads for all 5 target failure scenarios:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th width="130">Scenario</th>
+        <th width="140">Trigger Alarm & Metric</th>
+        <th>Filtered Logs (30m) & CloudTrail Evidence (60m)</th>
+        <th width="150">ArchViz Topology</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. RDS Bottleneck</strong></td>
+        <td><code>CPUUtilization: 96.4%</code><br><code>DatabaseConnections: 498/500</code></td>
+        <td><code>FATAL: remaining connection slots are reserved for non-replication superuser connections</code><br>CloudTrail: <code>ModifyDBParameterGroup</code> (max_connections)</td>
+        <td>APIGW ➔ Lambda ➔ Aurora Postgres</td>
+      </tr>
+      <tr>
+        <td><strong>2. Container CrashLoop</strong></td>
+        <td><code>ContainerCrashCount: 7</code><br>Task stop count &gt; 3 in 10m</td>
+        <td>Container <code>Exit Code 137 (OutOfMemoryError)</code> - V8 JS Heap Limit Exceeded<br>CloudTrail: <code>RegisterTaskDefinition</code> (memory reduced to 512MB)</td>
+        <td>ALB ➔ ECS Service ➔ Redis Cache</td>
+      </tr>
+      <tr>
+        <td><strong>3. Security Group Drift</strong></td>
+        <td>AWS Config Non-Compliant<br>GuardDuty Portscan</td>
+        <td>Suspicious external SSH & Postgres connection handshakes<br>CloudTrail: <code>AuthorizeSecurityGroupIngress</code> opening port 22/5432 to <code>0.0.0.0/0</code></td>
+        <td>Internet GW ➔ Security Group ➔ RDS</td>
+      </tr>
+      <tr>
+        <td><strong>4. API 5xx Timeouts</strong></td>
+        <td><code>5XXError Rate: 48%</code><br><code>TargetResponseTime: 3450ms</code></td>
+        <td>Lambda log: <code>Task timed out after 3.00 seconds</code><br>ALB: <code>504 Gateway Timeout</code><br>CloudTrail: <code>PutScalingPolicy</code> hitting max capacity</td>
+        <td>CloudFront ➔ ALB ➔ Lambda ➔ DynamoDB</td>
+      </tr>
+      <tr>
+        <td><strong>5. FinOps Idle Waste</strong></td>
+        <td><code>VolumeTotalReadWriteOps: 0</code><br><code>BytesOutToDestination: 0</code></td>
+        <td>AWS Cost Anomaly Detection alert: unattached volume for 168 hours ($125/mo waste)<br>CloudTrail: <code>DetachVolume</code> leaving volume unattached</td>
+        <td>Legacy VPC ➔ NAT Gateway & Orphaned EBS</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 4: HOW GARGI LINKS -->
+  <h2>4. How Gargi Will Link Her Engine With Your Code</h2>
+
+  <p>
+    Gargi connects to your code using a single standardized contract called <strong>Handoff 1</strong>. You deliver the raw data; her system consumes it.
+  </p>
+
+  <div class="callout callout-blue">
+    <div class="callout-title">The Exact Handoff 1 Data Contract (src/types/alertPayload.ts)</div>
+    Whenever an incident triggers, your backend service produces this exact TypeScript object and passes it to Gargi:
+  </div>
+
+  <pre><code>export interface AlertPayload {
+  incidentId: string;
+  triggeredAt: string;
+  activeAlarms: Array<{
+    alarmId: string;
+    alarmName: string;
+    nodeId: string;          // Maps directly to ArchViz canvas node ID
+    awsResourceId: string;   // Full AWS ARN or physical ID
+    metricName: string;
+    metricValue: number;
+    threshold: number;
+    timestamp: string;
+  }>;
+  cloudWatchLogs30m: Array<{
+    timestamp: string;
+    nodeId: string;
+    awsResourceId: string;
+    level: 'ERROR' | 'FATAL' | 'WARN' | 'TIMEOUT';
+    message: string;
+  }>;
+  cloudTrailEvents60m: Array<{
+    eventId: string;
+    eventTime: string;
+    eventName: string;
+    awsResourceId: string;
+    userIdentity: string;
+    requestParameters: Record&lt;string, unknown&gt;;
+  }>;
+  canvasGraph: {
+    nodes: Array&lt;{ id: string; type: string; awsResourceId: string; data: Record&lt;string, unknown&gt; }&gt;;
+    edges: Array&lt;{ id: string; source: string; target: string }&gt;;
+  };
+}</code></pre>
+
+  <h3>How Gargi Invokes Your Code (Two Clean Methods):</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Option A: Direct Function Hook</div>
+      <div class="card-text">
+        In <code>src/handoff/gargiConnector.ts</code>, your system exports:<br>
+        <code>handoffToGargiEngine(alertPayload)</code><br>
+        This directly invokes Gargi's function:<br>
+        <code>runAutomatedRcaPipeline(alertPayload)</code>.<br>
+        Gargi registers her implementation by calling <code>registerGargiEngine(myRcaHandler)</code>.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Option B: REST Webhook / API Pull</div>
+      <div class="card-text">
+        If Gargi runs as a separate Python or Node microservice:<br>
+        1. Your service can HTTP POST the payload to <code>GARGI_RCA_WEBHOOK_URL</code>.<br>
+        2. Or Gargi's service can fetch any incident payload by ID via:<br>
+        <code>GET /api/handoff/incidents/:id</code>.
+      </div>
+    </div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 5: WHAT GARGI DOES WITH YOUR DATA -->
+  <h2>5. What Gargi Does With Your Data (Her Diagnostic Scope)</h2>
+
+  <p>
+    Once your backend feeds the <code>AlertPayload</code> into Gargi's function, her code executes four sequential tasks:
+  </p>
+
+  <div class="flow-step">
+    <div class="step-num">A</div>
+    <div class="step-content">
+      <strong>Graph Alert Deduplication:</strong> When an RDS database fails, the connected Lambda and API Gateway also start throwing errors, creating 10+ alarms. Gargi uses the <code>canvasGraph</code> you provide to traverse downstream edges and find the single deepest root resource (collapsing 10 alarms into 1 root incident).
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">B</div>
+    <div class="step-content">
+      <strong>Runbook Search via RAG:</strong> For that failing resource, her RAG retriever takes the pre-filtered logs and CloudTrail changes you gave her and queries her vector database of 25 AWS troubleshooting runbooks to find the root cause.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">C</div>
+    <div class="step-content">
+      <strong>Confidence Scoring (0% to 100%):</strong> She calculates a mathematical confidence score: 40% if an exact error code matches, 25% if a CloudTrail change happened shortly before the alarm, 20% if metrics crossed 90%, and 15% based on runbook similarity.
+    </div>
+  </div>
+
+  <div class="flow-step">
+    <div class="step-num">D</div>
+    <div class="step-content">
+      <strong>Handoff 2 to Sweta:</strong> Gargi packages her diagnosis into <code>DiagnosisReport</code> (containing <code>failingNodeId</code>, <code>scenarioType</code>, <code>confidenceScore</code>, <code>rootCauseSummary</code>, and <code>recommendedFixIntent</code>) and passes it to Sweta.
+    </div>
+  </div>
+
+  <!-- SECTION 6: WHAT WE STILL HAVE TO DO -->
+  <h2>6. What We Still Have To Do (Roadmap & Next Steps)</h2>
+
+  <p>
+    Here is the roadmap from the 12-Week AI Engineering Schedule, clearly showing where your project is now and what comes next:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th width="120">Sprint Window</th>
+        <th width="160">What Krish (YOU) Owns</th>
+        <th>What Gargi & Sweta Own</th>
+        <th width="100">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Weeks 1–2<br>(Nov 1–14)</strong></td>
+        <td><strong>AWS Telemetry Ingestion Pipeline:</strong><br>Build live CloudWatch & CloudTrail collector, log filter, canvas graph adapter, and 5 offline scenarios.</td>
+        <td>Gargi: Graph alert deduplication & 25 runbook markdown files.<br>Sweta: 3-Gate safety inspector.</td>
+        <td><span class="badge badge-green">Krish Done (100%)</span></td>
+      </tr>
+      <tr>
+        <td><strong>Weeks 3–4<br>(Nov 15–30)</strong></td>
+        <td><strong>Sandbox Webhook Integration:</strong><br>Connect AWS EventBridge webhook listener to automatically trigger Gargi ➔ Sweta pipeline in sandbox.</td>
+        <td>Gargi: Runbook RAG retriever in <code>RagRetrieverNode.tsx</code>.<br>Sweta: Terraform HCL diff & AWS SDK command generator.</td>
+        <td><span class="badge badge-blue">Ready to Wire</span></td>
+      </tr>
+      <tr>
+        <td><strong>Weeks 5–6<br>(Dec 1–14)</strong></td>
+        <td><strong>Interactive Approval Engine:</strong><br>Wire Sweta's Verified Fix Package into Slack Block Kit and ArchViz Web UI with <code>[Approve & Fix]</code> buttons.</td>
+        <td>Gargi: Real-time incident logs in chat drawer.<br>Sweta: Telemetry-calibrated pre-flight simulation.</td>
+        <td><span class="badge badge-purple">Upcoming</span></td>
+      </tr>
+      <tr>
+        <td><strong>Weeks 7–8<br>(Dec 15–31)</strong></td>
+        <td><strong>Beta User Onboarding:</strong><br>Onboard first 5–10 beta companies and connect their read-only AWS accounts to the telemetry pipeline.</td>
+        <td>Gargi: 25 simulated faults in test VPC.<br>Sweta: GitOps PR backport engine.</td>
+        <td><span class="badge badge-purple">Upcoming</span></td>
+      </tr>
+      <tr>
+        <td><strong>Weeks 9–12<br>(Jan 1–31)</strong></td>
+        <td><strong>Autonomous Cloud Agent Public Launch:</strong><br>Convert audit users into paying 24/7 autonomous accounts. Automated fix execution in AWS on approval.</td>
+        <td>Gargi: Tuning noisy alerts from launch logs.<br>Sweta: Expanding remediation templates to top 15 AWS services.</td>
+        <td><span class="badge badge-purple">Upcoming</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- SECTION 7: KRISH'S NEXT TASKS -->
+  <h2>7. Krish's Immediate Next Tasks</h2>
+  <div class="callout callout-amber">
+    <div class="callout-title">Krish's Next Engineering Steps</div>
+    <ol style="margin-left: 18px; margin-top: 4px; font-size: 8.5pt; color: #78350f;">
+      <li style="margin-bottom: 5px;"><strong>Give Gargi the Handoff 1 Contract:</strong> Share <code>src/types/alertPayload.ts</code> and sample payload files (e.g. <code>alertPayload-container_crashloop.json</code>) so she can write her unit tests against real data.</li>
+      <li style="margin-bottom: 5px;"><strong>Wire Gargi's Entry Hook:</strong> When Gargi pushes her <code>runAutomatedRcaPipeline</code>, wire it into <code>src/handoff/gargiConnector.ts</code> so live alerts flow straight into her module.</li>
+      <li style="margin-bottom: 5px;"><strong>Prepare the Approval Execution Engine (Weeks 5–6):</strong> Once Sweta delivers Handoff 3 (Verified Fix Package), build the 1-click execution routine that calls the AWS SDK v3 to apply the approved change to the user's AWS account.</li>
+    </ol>
+  </div>
+
+  <p style="text-align: center; color: #94a3b8; font-size: 7.5pt; margin-top: 20px;">
+    ArchViz Autonomous Engineering Manual &bull; Confidential & Internal Team Reference &bull; Generated November 2026
+  </p>
+
+</body>
+</html>
