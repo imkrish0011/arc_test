@@ -70,6 +70,7 @@ export class AgentExecutionEngine {
     const scenarioType = bestRagMatch?.runbook.scenario || 'unknown_incident';
     const recommendedFixIntent = bestRagMatch?.runbook.fixIntent || 'INSPECT_AND_REMEDIATE';
 
+    // Problem context passed to Sweta (strictly problem parameters, not solutions)
     const targetParameters: Record<string, unknown> = {
       failingNodeId: rootAnalysis.rootFailingNodeId,
       awsResourceId: rootResourceId,
@@ -79,29 +80,11 @@ export class AgentExecutionEngine {
       threshold: rootAnalysis.rootAlarm.threshold,
     };
 
-    // Include CloudTrail mutation params if present
+    // Include CloudTrail mutation params if present as factual evidence of recent change
     const recentTrail = alertPayload.cloudTrailEvents60m[0];
     if (recentTrail) {
       targetParameters.correlatedCloudTrailEvent = recentTrail.eventName;
       targetParameters.recentMutationParams = recentTrail.requestParameters;
-    }
-
-    // Enrich scenario-specific target parameters for Sweta's Remediation Engine
-    if (scenarioType === 'rds_bottleneck') {
-      targetParameters.recommendedInstanceClass = 'db.r6g.xlarge';
-      targetParameters.enableRdsProxy = true;
-    } else if (scenarioType === 'container_crashloop') {
-      targetParameters.recommendedMemoryLimitMb = 1024;
-      targetParameters.recommendedMemoryReservationMb = 512;
-    } else if (scenarioType === 'security_group_drift') {
-      targetParameters.securityGroupId = rootResourceId;
-      targetParameters.offendingPort = 22;
-      targetParameters.offendingCidr = '0.0.0.0/0';
-      targetParameters.offendingProtocol = 'tcp';
-    } else if (scenarioType === 'api_5xx_timeouts') {
-      targetParameters.recommendedTimeoutSeconds = 15;
-    } else if (scenarioType === 'finops_idle_waste') {
-      targetParameters.action = 'SNAPSHOT_AND_DELETE_EBS';
     }
 
     const logEvidenceLine =
