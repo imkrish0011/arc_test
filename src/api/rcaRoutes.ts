@@ -71,22 +71,27 @@ rcaRouter.get('/runbooks', (_req: Request, res: Response): void => {
  */
 rcaRouter.post('/chat', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { question, incidentId } = req.body;
+    const { question, incidentId, payload: customPayload } = req.body;
     if (!question) {
       res.status(400).json({ error: 'Missing question in request body' });
       return;
     }
 
-    const incident = incidentId
-      ? incidentStore.getIncident(incidentId)
-      : incidentStore.getLatestIncident();
+    let payload: AlertPayload | undefined;
+    if (customPayload) {
+      payload = customPayload as AlertPayload;
+    } else {
+      const incident = incidentId
+        ? incidentStore.getIncident(incidentId)
+        : incidentStore.getLatestIncident();
+      payload = incident?.payload;
+    }
 
-    if (!incident) {
+    if (!payload) {
       res.status(404).json({ error: 'Incident not found' });
       return;
     }
 
-    const payload = incident.payload;
     const report = await runAutomatedRcaPipeline(payload);
 
     // Simple deterministic Q&A synthesis using retrieved telemetry & report

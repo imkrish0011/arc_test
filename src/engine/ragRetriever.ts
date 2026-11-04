@@ -34,9 +34,17 @@ export class RagRetriever {
   public static loadRunbooks(runbooksDir?: string): RunbookDocument[] {
     if (this.runbooks.length > 0) return this.runbooks;
 
-    const baseDir = runbooksDir || path.resolve(__dirname, '../data/sre-runbooks');
+    let baseDir = runbooksDir || path.resolve(__dirname, '../data/sre-runbooks');
     if (!fs.existsSync(baseDir)) {
-      return [];
+      const distFallback = path.resolve(process.cwd(), 'dist/data/sre-runbooks');
+      const rootFallback = path.resolve(process.cwd(), 'src/data/sre-runbooks');
+      if (fs.existsSync(distFallback)) {
+        baseDir = distFallback;
+      } else if (fs.existsSync(rootFallback)) {
+        baseDir = rootFallback;
+      } else {
+        return [];
+      }
     }
 
     const files = fs.readdirSync(baseDir).filter(f => f.endsWith('.md'));
@@ -67,6 +75,22 @@ export class RagRetriever {
       patterns.push(match[1]);
     }
 
+    // Extract Common Root Causes
+    const rootCauses: string[] = [];
+    const rcSection = content.split('## Common Root Causes')[1]?.split('##')[0] || '';
+    const rcLines = rcSection.split('\n').filter(l => /^\d+\.\s+/.test(l.trim()));
+    for (const l of rcLines) {
+      rootCauses.push(l.replace(/^\d+\.\s+/, '').trim());
+    }
+
+    // Extract Recommended Remediation
+    const remediation: string[] = [];
+    const remSection = content.split('## Recommended Remediation')[1]?.split('##')[0] || '';
+    const remLines = remSection.split('\n').filter(l => /^-\s+/.test(l.trim()));
+    for (const l of remLines) {
+      remediation.push(l.replace(/^-\s+/, '').trim());
+    }
+
     return {
       id,
       title: titleMatch ? titleMatch[1].trim() : id,
@@ -74,8 +98,8 @@ export class RagRetriever {
       targetService: serviceMatch ? serviceMatch[1].trim() : 'AWS',
       fixIntent: fixMatch ? fixMatch[1].trim() : 'MANUAL_INSPECTION',
       patterns,
-      rootCauses: [],
-      remediation: [],
+      rootCauses,
+      remediation,
       rawContent: content,
     };
   }
@@ -92,9 +116,14 @@ export class RagRetriever {
     if (runbooks.length === 0) return [];
 
     // Filter logs for root node if provided, else take all non-info logs
-    const relevantLogs = rootNodeId
+    let relevantLogs = rootNodeId
       ? logs.filter(l => l.nodeId === rootNodeId)
       : logs;
+
+    // Fallback if no logs specifically tagged with rootNodeId
+    if (relevantLogs.length === 0 && logs.length > 0) {
+      relevantLogs = logs;
+    }
 
     const logMessages = relevantLogs.map(l => l.message.toLowerCase());
     const trailEventNames = trailEvents.map(e => e.eventName.toLowerCase());

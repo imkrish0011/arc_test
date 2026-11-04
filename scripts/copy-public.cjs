@@ -1,11 +1,21 @@
 const fs = require('fs');
 const path = require('path');
 
-const srcDir = path.resolve(__dirname, '../src/public');
-const destDir = path.resolve(__dirname, '../dist/public');
+const srcPublic = path.resolve(__dirname, '../src/public');
+const destPublic = path.resolve(__dirname, '../dist/public');
 
-if (fs.existsSync(srcDir)) {
-  fs.mkdirSync(destDir, { recursive: true });
-  fs.cpSync(srcDir, destDir, { recursive: true });
+if (fs.existsSync(srcPublic)) {
+  fs.mkdirSync(destPublic, { recursive: true });
+  fs.cpSync(srcPublic, destPublic, { recursive: true });
   console.log('✅ Copied src/public to dist/public');
 }
+
+const srcData = path.resolve(__dirname, '../src/data');
+const destData = path.resolve(__dirname, '../dist/data');
+
+if (fs.existsSync(srcData)) {
+  fs.mkdirSync(destData, { recursive: true });
+  fs.cpSync(srcData, destData, { recursive: true });
+  console.log('✅ Copied src/data to dist/data');
+}
+

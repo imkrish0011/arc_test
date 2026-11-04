@@ -86,14 +86,36 @@ export class AgentExecutionEngine {
       targetParameters.recentMutationParams = recentTrail.requestParameters;
     }
 
+    // Enrich scenario-specific target parameters for Sweta's Remediation Engine
+    if (scenarioType === 'rds_bottleneck') {
+      targetParameters.recommendedInstanceClass = 'db.r6g.xlarge';
+      targetParameters.enableRdsProxy = true;
+    } else if (scenarioType === 'container_crashloop') {
+      targetParameters.recommendedMemoryLimitMb = 1024;
+      targetParameters.recommendedMemoryReservationMb = 512;
+    } else if (scenarioType === 'security_group_drift') {
+      targetParameters.securityGroupId = rootResourceId;
+      targetParameters.offendingPort = 22;
+      targetParameters.offendingCidr = '0.0.0.0/0';
+      targetParameters.offendingProtocol = 'tcp';
+    } else if (scenarioType === 'api_5xx_timeouts') {
+      targetParameters.recommendedTimeoutSeconds = 15;
+    } else if (scenarioType === 'finops_idle_waste') {
+      targetParameters.action = 'SNAPSHOT_AND_DELETE_EBS';
+    }
+
     const logEvidenceLine =
       bestRagMatch?.keyEvidenceLine ||
       rootLogs[0]?.message ||
       alertPayload.cloudWatchLogs30m[0]?.message ||
       'No specific error line matched';
 
+    const rootCauseDetail = bestRagMatch?.runbook.rootCauses?.[0]
+      ? ` Primary cause: ${bestRagMatch.runbook.rootCauses[0]}`
+      : '';
+
     const rootCauseSummary = bestRagMatch
-      ? `Root cause identified as ${bestRagMatch.runbook.title}. ${rootAnalysis.cascadingAlarms.length} cascading alerts collapsed to ${rootAnalysis.rootFailingNodeId}.`
+      ? `Root cause identified as ${bestRagMatch.runbook.title}.${rootCauseDetail} ${rootAnalysis.cascadingAlarms.length} cascading alerts collapsed to ${rootAnalysis.rootFailingNodeId}.`
       : `Anomalous behavior detected on resource ${rootResourceId} crossing threshold (${rootAnalysis.rootAlarm.metricName}: ${rootAnalysis.rootAlarm.metricValue}).`;
 
     return {

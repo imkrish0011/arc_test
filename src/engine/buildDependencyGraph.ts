@@ -110,13 +110,17 @@ export function findRootFailingNode(
 
   const cascadingAlarms = activeAlarms.filter(a => a.nodeId !== rootNodeId);
 
-  // Trace the cascade path from root upstream to the outer edge
+  // Trace the cascade path from root upstream to the outer edge (safeguarded against cyclic graphs)
   const cascadePath: string[] = [rootNodeId];
+  const visitedCascade = new Set<string>([rootNodeId]);
   let current = rootNodeId;
   while (true) {
-    const parents = (upstreamAdj.get(current) || []).filter(p => alarmNodeIds.has(p));
+    const parents = (upstreamAdj.get(current) || []).filter(
+      p => alarmNodeIds.has(p) && !visitedCascade.has(p)
+    );
     if (parents.length === 0) break;
     current = parents[0];
+    visitedCascade.add(current);
     cascadePath.push(current);
   }
 
