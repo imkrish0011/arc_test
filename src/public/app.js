@@ -1,7 +1,8 @@
-// ArchAutomation Telemetry Dashboard Client
+// ArchAutomation Telemetry & Gargi RCA Test Inspector Client
 let currentPayload = null;
 let currentScenario = 'rds_bottleneck';
 let activeLogLevel = 'ALL';
+let currentReport = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initTabs();
@@ -9,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initActionButtons();
   initLogFilterPills();
   initLiveModal();
+  initRcaChat();
   checkAwsStatus();
   loadScenario(currentScenario);
 });
@@ -50,21 +52,21 @@ function initTabs() {
   });
 }
 
-// Initialize Scenario Buttons
+// Scenario Buttons
 function initScenarioButtons() {
-  const scBtns = document.querySelectorAll('.btn-scenario[data-scenario]');
-  scBtns.forEach(btn => {
+  const buttons = document.querySelectorAll('.btn-scenario[data-scenario]');
+  buttons.forEach(btn => {
     btn.addEventListener('click', () => {
-      scBtns.forEach(b => b.classList.remove('active'));
+      buttons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      const sc = btn.getAttribute('data-scenario');
-      currentScenario = sc;
-      loadScenario(sc);
+      const scenario = btn.getAttribute('data-scenario');
+      currentScenario = scenario;
+      loadScenario(scenario);
     });
   });
 }
 
-// Load Scenario Telemetry
+// Load Scenario Telemetry & Auto-run Gargi RCA
 async function loadScenario(scenarioId) {
   try {
     const res = await fetch(`/api/scenarios/trigger/${scenarioId}`, { method: 'POST' });
@@ -72,82 +74,162 @@ async function loadScenario(scenarioId) {
     if (data.success && data.payload) {
       currentPayload = data.payload;
       renderPayload(currentPayload);
+      // Automatically run RCA on scenario load so the RCA test tab is immediately live
+      runGargiRca();
     }
   } catch (err) {
-    console.error('Failed to load scenario:', err);
+    console.error('Failed to trigger scenario:', err);
+    showToast('Failed to load scenario: ' + err.message);
   }
 }
 
-// Render Payload
-function renderPayload(payload) {
-  if (!payload) return;
-
-  // Metadata
-  document.getElementById('incident-id').innerText = payload.incidentId;
-  document.getElementById('incident-time').innerText = new Date(payload.triggeredAt).toLocaleString();
-  document.getElementById('alarms-count-badge').innerText = `${payload.activeAlarms.length} Active`;
-  document.getElementById('tab-logs-count').innerText = payload.cloudWatchLogs30m.length;
-  document.getElementById('tab-trail-count').innerText = payload.cloudTrailEvents60m.length;
-  document.getElementById('tab-nodes-count').innerText = `${payload.canvasGraph.nodes.length} Nodes`;
-
-  // Alarms
-  renderAlarms(payload.activeAlarms);
-
-  // Filtered Logs
-  renderLogs(payload.cloudWatchLogs30m);
-
-  // CloudTrail Events
-  renderCloudTrail(payload.cloudTrailEvents60m);
-
-  // Canvas Graph
-  renderCanvasGraph(payload.canvasGraph);
-
-  // JSON viewer
-  document.getElementById('raw-json-output').innerText = JSON.stringify(payload, null, 2);
+// Execute Gargi RCA
+async function runGargiRca() {
+  if (!currentPayload) return;
+  try {
+    const res = await fetch('/api/rca/diagnose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload: currentPayload }),
+    });
+    const data = await res.json();
+    if (data.success && data.report) {
+      currentReport = data.report;
+      renderRcaReport(currentReport);
+    }
+  } catch (err) {
+    console.error('RCA run error:', err);
+  }
 }
 
-// Render Alarms Grid
-function renderAlarms(alarms) {
-  const container = document.getElementById('alarms-list');
-  container.innerHTML = '';
+// Render Gargi's Diagnosis into RCA Tab
+function renderRcaReport(report) {
+  const confidencePct = Math.round(report.confidenceScore * 100);
+  const pill = document.getElementById('rca-confidence-pill');
+  pill.innerText = `${confidencePct}% Confidence`;
+  pill.style.background = confidencePct >= 80 ? '#065f46' : confidencePct >= 60 ? '#854d0e' : '#991b1b';
+  pill.style.color = confidencePct >= 80 ? '#34d399' : confidencePct >= 60 ? '#fde047' : '#fca5a5';
 
-  alarms.forEach(a => {
-    const card = document.createElement('div');
-    card.className = 'alarm-card';
-    card.innerHTML = `
-      <div class="alarm-header">
-        <span class="alarm-name">${escapeHtml(a.alarmName)}</span>
-        <span class="alarm-node-tag">${escapeHtml(a.nodeId)}</span>
-      </div>
-      <div class="alarm-resource" title="${escapeHtml(a.awsResourceId)}">
-        ${escapeHtml(a.awsResourceId)}
-      </div>
-      <div class="alarm-metric-row">
-        <span>Metric: <strong>${escapeHtml(a.metricName)}</strong></span>
-        <span class="metric-crossed">${a.metricValue} (Threshold: &gt;${a.threshold})</span>
-      </div>
-    `;
-    container.appendChild(card);
+  document.getElementById('rca-root-node').innerText = report.failingNodeId;
+  document.getElementById('rca-root-resource').innerText = report.awsResourceId;
+  document.getElementById('rca-summary').innerText = report.rootCauseSummary;
+  document.getElementById('rca-evidence-line').innerText = report.logEvidenceLine;
+  document.getElementById('rca-fix-intent').innerText = report.recommendedFixIntent;
+
+  // Confidence Breakdown
+  const b = report.confidenceBreakdown;
+  document.getElementById('score-log').innerText = `+${Math.round(b.exactErrorCodeLogMatch * 100)}%`;
+  document.getElementById('score-trail').innerText = `+${Math.round(b.recentCloudTrailChange * 100)}%`;
+  document.getElementById('score-metric').innerText = `+${Math.round(b.resourceMetricOver90 * 100)}%`;
+  document.getElementById('score-runbook').innerText = `+${Math.round(b.runbookSimilarity * 100)}%`;
+
+  // Append welcome context in Chat Log if empty
+  const chatLog = document.getElementById('rca-chat-log');
+  chatLog.innerHTML = `
+    <div style="background:#1e293b; padding:0.6rem 0.85rem; border-radius:6px; color:#cbd5e1;">
+      <strong>Gargi AI Diagnostic Assistant:</strong> Diagnosed <strong>${escapeHtml(report.scenarioType)}</strong> on root resource <code>${escapeHtml(report.failingNodeId)}</code> with <strong>${confidencePct}% confidence</strong>.<br>
+      Deduplication collapsed <strong>${report.deduplicationAnalysis.cascadingAlarmsCount} cascading alerts</strong>.
+    </div>
+  `;
+}
+
+// Initialize Interactive Incident Q&A Assistant (Task 4)
+function initRcaChat() {
+  const form = document.getElementById('rca-chat-form');
+  const input = document.getElementById('rca-chat-input');
+  const chatLog = document.getElementById('rca-chat-log');
+
+  const sendQuestion = async (q) => {
+    if (!q || !currentPayload) return;
+
+    // Append user question
+    const userMsg = document.createElement('div');
+    userMsg.style.cssText = 'background:#0284c7; color:#fff; padding:0.5rem 0.85rem; border-radius:6px; align-self:flex-end; max-width:85%;';
+    userMsg.innerText = q;
+    chatLog.appendChild(userMsg);
+    chatLog.scrollTop = chatLog.scrollHeight;
+
+    try {
+      const res = await fetch('/api/rca/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, incidentId: currentPayload.incidentId }),
+      });
+      const data = await res.json();
+
+      const aiMsg = document.createElement('div');
+      aiMsg.style.cssText = 'background:#1e293b; color:#e2e8f0; padding:0.6rem 0.85rem; border-radius:6px; align-self:flex-start; max-width:90%; white-space:pre-wrap; line-height:1.4;';
+      aiMsg.innerHTML = `<strong>Gargi AI:</strong>\n${escapeHtml(data.answer)}`;
+      chatLog.appendChild(aiMsg);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    } catch (err) {
+      const errMsg = document.createElement('div');
+      errMsg.style.cssText = 'color:#f87171; font-size:0.8rem;';
+      errMsg.innerText = 'Failed to get answer: ' + err.message;
+      chatLog.appendChild(errMsg);
+    }
+  };
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const q = input.value.trim();
+    if (q) {
+      sendQuestion(q);
+      input.value = '';
+    }
   });
-}
 
-// Log Filters
-function initLogFilterPills() {
-  const pills = document.querySelectorAll('.filter-pill');
-  pills.forEach(pill => {
-    pill.addEventListener('click', () => {
-      pills.forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      activeLogLevel = pill.getAttribute('data-level');
-      if (currentPayload) {
-        renderLogs(currentPayload.cloudWatchLogs30m);
-      }
+  document.querySelectorAll('.btn-quick-qa').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.getAttribute('data-q');
+      sendQuestion(q);
     });
   });
 }
 
-// Render Filtered Logs
-function renderLogs(logs) {
+// Render Current Payload into UI
+function renderPayload(payload) {
+  document.getElementById('incident-id').innerText = payload.incidentId;
+  document.getElementById('incident-time').innerText = new Date(payload.triggeredAt).toLocaleString();
+
+  // Active Alarms Count & List
+  document.getElementById('alarms-count-badge').innerText = `${payload.activeAlarms.length} Active`;
+  const alarmsList = document.getElementById('alarms-list');
+  alarmsList.innerHTML = '';
+  payload.activeAlarms.forEach(alarm => {
+    const card = document.createElement('div');
+    card.className = 'alarm-item-card';
+    card.innerHTML = `
+      <div class="alarm-header">
+        <span class="alarm-name">${escapeHtml(alarm.alarmName)}</span>
+        <span class="alarm-metric-badge">${escapeHtml(alarm.metricName)}: ${alarm.metricValue} (Threshold: ${alarm.threshold})</span>
+      </div>
+      <div class="alarm-sub">
+        <span>Node: <strong>${escapeHtml(alarm.nodeId)}</strong></span>
+        <span class="alarm-arn" title="${escapeHtml(alarm.awsResourceId)}">${escapeHtml(alarm.awsResourceId)}</span>
+      </div>
+    `;
+    alarmsList.appendChild(card);
+  });
+
+  // Logs Count & Table
+  document.getElementById('tab-logs-count').innerText = payload.cloudWatchLogs30m.length;
+  renderLogsTable(payload.cloudWatchLogs30m);
+
+  // CloudTrail Count & List
+  document.getElementById('tab-trail-count').innerText = payload.cloudTrailEvents60m.length;
+  renderTrailList(payload.cloudTrailEvents60m);
+
+  // Canvas Graph Nodes & Edges
+  document.getElementById('tab-nodes-count').innerText = `${payload.canvasGraph.nodes.length} Nodes`;
+  renderCanvasGraph(payload.canvasGraph);
+
+  // JSON Contract Tab
+  document.getElementById('raw-json-output').innerText = JSON.stringify(payload, null, 2);
+}
+
+// Render Filtered Logs Table
+function renderLogsTable(logs) {
   const tbody = document.getElementById('logs-table-body');
   tbody.innerHTML = '';
 
@@ -156,143 +238,141 @@ function renderLogs(logs) {
     : logs.filter(l => l.level === activeLogLevel);
 
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 2rem; color: var(--text-dim);">No log entries matching level '${activeLogLevel}'</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:2rem;">No logs found for level: ${activeLogLevel}</td></tr>`;
     return;
   }
 
   filtered.forEach(log => {
     const tr = document.createElement('tr');
+    tr.className = `log-row log-row-${log.level.toLowerCase()}`;
     tr.innerHTML = `
-      <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-      <td><span class="log-level-badge lvl-${log.level}">${log.level}</span></td>
-      <td><span class="alarm-node-tag">${escapeHtml(log.nodeId)}</span></td>
-      <td style="font-size:0.75rem; color:var(--text-muted);" title="${escapeHtml(log.awsResourceId)}">
-        ${escapeHtml(log.awsResourceId.split(':').pop() || log.awsResourceId)}
-      </td>
+      <td class="log-ts">${new Date(log.timestamp).toLocaleTimeString()}</td>
+      <td><span class="level-tag level-${log.level.toLowerCase()}">${log.level}</span></td>
+      <td><span class="node-tag">${escapeHtml(log.nodeId)}</span></td>
+      <td class="res-tag" title="${escapeHtml(log.awsResourceId)}">${escapeHtml(log.awsResourceId)}</td>
       <td class="log-msg">${escapeHtml(log.message)}</td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-// Render CloudTrail
-function renderCloudTrail(events) {
+// Render CloudTrail Events List
+function renderTrailList(events) {
   const container = document.getElementById('trail-list-container');
   container.innerHTML = '';
 
   if (events.length === 0) {
-    container.innerHTML = '<div style="color:var(--text-dim); text-align:center; padding:2rem;">No recent CloudTrail mutation events found in 60m window.</div>';
+    container.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:2rem;">No configuration mutations in 60m window.</div>`;
     return;
   }
 
   events.forEach(evt => {
-    const item = document.createElement('div');
-    item.className = 'trail-item';
-    item.innerHTML = `
+    const card = document.createElement('div');
+    card.className = 'trail-card';
+    card.innerHTML = `
       <div class="trail-header">
-        <span class="trail-name">${escapeHtml(evt.eventName)}</span>
-        <span class="trail-user">User: <strong>${escapeHtml(evt.userIdentity)}</strong></span>
+        <span class="trail-event-name">${escapeHtml(evt.eventName)}</span>
+        <span class="trail-time">${new Date(evt.eventTime).toLocaleTimeString()}</span>
       </div>
-      <div style="font-size:0.75rem; color:var(--text-dim); font-family:var(--font-mono);">
-        Event ID: ${escapeHtml(evt.eventId)} | Time: ${new Date(evt.eventTime).toLocaleString()} | Resource: ${escapeHtml(evt.awsResourceId)}
+      <div class="trail-meta">
+        <div>Target Resource: <code>${escapeHtml(evt.awsResourceId)}</code></div>
+        <div>User Identity: <strong>${escapeHtml(evt.userIdentity)}</strong></div>
       </div>
-      <div class="trail-params-box">
-        <pre>${JSON.stringify(evt.requestParameters, null, 2)}</pre>
+      <div class="trail-params">
+        <div class="trail-params-title">Request Parameters:</div>
+        <pre class="trail-params-json"><code>${escapeHtml(JSON.stringify(evt.requestParameters, null, 2))}</code></pre>
       </div>
     `;
-    container.appendChild(item);
+    container.appendChild(card);
   });
 }
 
-// Render Canvas Graph
+// Render Canvas Graph Preview
 function renderCanvasGraph(graph) {
   const container = document.getElementById('canvas-nodes-container');
-  const edgesContainer = document.getElementById('canvas-edges-container');
   container.innerHTML = '';
-  edgesContainer.innerHTML = '';
 
-  graph.nodes.forEach((node, index) => {
-    const nodeCard = document.createElement('div');
-    const isCritical = node.data?.healthStatus === 'critical';
-    nodeCard.className = `canvas-node-card ${isCritical ? 'node-critical' : ''}`;
-    nodeCard.innerHTML = `
-      <div class="node-type-badge">${escapeHtml(node.type)} &bull; ${escapeHtml(node.id)}</div>
-      <div class="node-label">${escapeHtml(String(node.data?.label || node.id))}</div>
-      <div class="node-res-id" title="${escapeHtml(node.awsResourceId)}">${escapeHtml(node.awsResourceId)}</div>
+  graph.nodes.forEach(n => {
+    const nodeEl = document.createElement('div');
+    nodeEl.className = `canvas-node-card node-status-${n.data?.healthStatus || 'healthy'}`;
+    nodeEl.innerHTML = `
+      <div class="node-type-label">${escapeHtml(n.type)}</div>
+      <div class="node-title">${escapeHtml(n.data?.label || n.id)}</div>
+      <div class="node-id">${escapeHtml(n.id)}</div>
+      <div class="node-arn" title="${escapeHtml(n.awsResourceId)}">${escapeHtml(n.awsResourceId)}</div>
     `;
-    container.appendChild(nodeCard);
-
-    if (index < graph.nodes.length - 1) {
-      const arrow = document.createElement('div');
-      arrow.className = 'graph-arrow';
-      arrow.innerHTML = '&rarr;';
-      container.appendChild(arrow);
-    }
+    container.appendChild(nodeEl);
   });
 
-  graph.edges.forEach(edge => {
-    const edgePill = document.createElement('div');
-    edgePill.className = 'edge-pill';
-    edgePill.innerText = `${edge.source} ➔ ${edge.target} (${edge.id})`;
-    edgesContainer.appendChild(edgePill);
+  const edgesContainer = document.getElementById('canvas-edges-container');
+  edgesContainer.innerHTML = '';
+  graph.edges.forEach(e => {
+    const tag = document.createElement('span');
+    tag.className = 'edge-tag';
+    tag.innerText = `${e.source} ➔ ${e.target}`;
+    edgesContainer.appendChild(tag);
   });
 }
 
-// Action Buttons: Copy, Download, Handoff
+// Log Filter Pills
+function initLogFilterPills() {
+  const pills = document.querySelectorAll('.filter-pill');
+  pills.forEach(p => {
+    p.addEventListener('click', () => {
+      pills.forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      activeLogLevel = p.getAttribute('data-level');
+      if (currentPayload) renderLogsTable(currentPayload.cloudWatchLogs30m);
+    });
+  });
+}
+
+// Action Buttons
 function initActionButtons() {
-  // Copy JSON
-  document.getElementById('btn-copy-json').addEventListener('click', () => {
-    if (!currentPayload) return;
-    navigator.clipboard.writeText(JSON.stringify(currentPayload, null, 2));
-    showToast('Copied alertPayload.json to clipboard!');
+  document.getElementById('btn-run-rca').addEventListener('click', () => {
+    runGargiRca();
+    // Switch to RCA tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="tab-rca"]').classList.add('active');
+    document.getElementById('tab-rca').classList.add('active');
+    showToast('Gargi RCA Engine executed!');
   });
 
-  document.getElementById('btn-copy-code').addEventListener('click', () => {
-    if (!currentPayload) return;
-    navigator.clipboard.writeText(JSON.stringify(currentPayload, null, 2));
-    showToast('Copied JSON!');
+  document.getElementById('btn-dispatch-handoff').addEventListener('click', () => {
+    dispatchHandoff();
   });
 
-  // Download JSON
-  document.getElementById('btn-download-json').addEventListener('click', () => {
-    if (!currentPayload) return;
-    const blob = new Blob([JSON.stringify(currentPayload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `alertPayload-${currentPayload.incidentId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('Downloaded alertPayload.json');
-  });
-
-  // Send Payload to Gargi's Engine
-  document.getElementById('btn-send-gargi').addEventListener('click', async () => {
-    if (!currentPayload) return;
-    await triggerHandoffModal();
-  });
-
-  // Modal Close
   document.getElementById('modal-close-btn').addEventListener('click', () => {
     document.getElementById('handoff-modal').classList.add('hidden');
   });
+
   document.getElementById('modal-ok-btn').addEventListener('click', () => {
     document.getElementById('handoff-modal').classList.add('hidden');
   });
+
+  document.getElementById('btn-copy-code').addEventListener('click', () => {
+    if (currentPayload) {
+      navigator.clipboard.writeText(JSON.stringify(currentPayload, null, 2));
+      showToast('AlertPayload JSON copied to clipboard!');
+    }
+  });
 }
 
-// Trigger Handoff Modal
-async function triggerHandoffModal() {
+// Dispatch Handoff
+async function dispatchHandoff() {
+  if (!currentPayload) return;
+
   const modal = document.getElementById('handoff-modal');
-  const bodyContent = document.getElementById('modal-body-content');
+  const body = document.getElementById('modal-body-content');
   const subtitle = document.getElementById('handoff-modal-subtitle');
 
   modal.classList.remove('hidden');
-  subtitle.innerText = 'Calling handoffToGargiEngine(alertPayload)...';
-  bodyContent.innerHTML = `
-    <div style="display:flex; align-items:center; gap:0.75rem; padding:1.5rem; justify-content:center;">
-      <div class="pulse-glow" style="width:14px; height:14px; border-radius:50%; background:#38bdf8;"></div>
-      <span>Verifying schema contract and transmitting payload...</span>
+  subtitle.innerText = `Transmitting ${currentPayload.incidentId}...`;
+  body.innerHTML = `
+    <div style="text-align:center; padding:2rem;">
+      <div class="spinner"></div>
+      <p style="margin-top:1rem; color:var(--text-secondary);">Executing Handoff 1 Contract verification & Gargi Diagnostic Engine...</p>
     </div>
   `;
 
@@ -304,49 +384,29 @@ async function triggerHandoffModal() {
     });
 
     const data = await res.json();
-    const handoff = data.handoffResult;
-
-    if (data.success && handoff) {
-      subtitle.innerText = 'Delivered to Gargi Diagnostic Engine';
-      bodyContent.innerHTML = `
-        <div class="handoff-step">
-          <div class="step-icon">&check;</div>
-          <div>
-            <div class="step-title">Handoff Contract 1 Verified</div>
-            <div class="step-desc">All 4 telemetry sources (activeAlarms, cloudWatchLogs30m, cloudTrailEvents60m, canvasGraph) match schema specification.</div>
-          </div>
+    if (data.success) {
+      const result = data.handoffResult;
+      const resp = result.response || {};
+      body.innerHTML = `
+        <div style="background:rgba(16,185,129,0.1); border:1px solid #10b981; border-radius:8px; padding:1.25rem; margin-bottom:1rem;">
+          <h4 style="color:#10b981; margin:0 0 0.5rem 0;">✅ Handoff Successfully Delivered & Diagnosed!</h4>
+          <p style="margin:0; font-size:0.875rem; color:#cbd5e1;">Target: <strong>${escapeHtml(result.target)}</strong></p>
+          <p style="margin:0.25rem 0 0 0; font-size:0.875rem; color:#cbd5e1;">Delivered At: <code>${result.deliveredAt}</code></p>
         </div>
-        <div class="handoff-step">
-          <div class="step-icon">&check;</div>
-          <div>
-            <div class="step-title">Transmission Channel: ${escapeHtml(data.dispatchType)}</div>
-            <div class="step-desc">Target: <code>${escapeHtml(handoff.target)}</code></div>
-          </div>
-        </div>
-        <div class="handoff-step">
-          <div class="step-icon">&check;</div>
-          <div>
-            <div class="step-title">Diagnostic Engine Status: ${escapeHtml(handoff.diagnosticStatus || 'pending_rca')}</div>
-            <div class="step-desc">Incident ID: <code>${escapeHtml(handoff.incidentId)}</code> &bull; Delivered At: ${new Date(handoff.deliveredAt).toLocaleTimeString()}</div>
-          </div>
-        </div>
-        <div class="trail-params-box">
-          <pre>${JSON.stringify(handoff.response, null, 2)}</pre>
-        </div>
+        <div style="font-size:0.85rem; color:#94a3b8; margin-bottom:0.5rem;">Handoff 2 Diagnosis Output (for Sweta):</div>
+        <pre class="json-code-block" style="max-height:220px;"><code>${escapeHtml(JSON.stringify(resp, null, 2))}</code></pre>
       `;
-      document.getElementById('handoff-status-badge').innerText = 'Delivered to Gargi';
       document.getElementById('handoff-status-badge').className = 'status-pill status-live';
+      document.getElementById('handoff-status-badge').innerText = 'Diagnosed by Gargi';
     } else {
-      subtitle.innerText = 'Handoff Error';
-      bodyContent.innerHTML = `
+      body.innerHTML = `
         <div style="color:var(--color-error); padding:1rem; background:rgba(239,68,68,0.1); border-radius:8px;">
-          Failed to transmit: ${escapeHtml(data.error || 'Unknown error')}
+          ${escapeHtml(data.error || 'Failed')}
         </div>
       `;
     }
   } catch (err) {
-    subtitle.innerText = 'Handoff Connection Failed';
-    bodyContent.innerHTML = `
+    body.innerHTML = `
       <div style="color:var(--color-error); padding:1rem; background:rgba(239,68,68,0.1); border-radius:8px;">
         ${escapeHtml(err.message)}
       </div>
@@ -392,7 +452,8 @@ function initLiveModal() {
       if (data.success && data.payload) {
         currentPayload = data.payload;
         renderPayload(currentPayload);
-        showToast('Live telemetry collected and mapped to canvas topology!');
+        runGargiRca();
+        showToast('Live telemetry collected and diagnosed!');
       }
     } catch (err) {
       showToast('Live collection failed: ' + err.message);

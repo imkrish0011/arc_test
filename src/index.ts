@@ -8,6 +8,7 @@ import { webhookRouter } from './api/webhooks.js';
 import { handoffRouter } from './api/handoffRoutes.js';
 import { scenarioRouter } from './api/scenarioRoutes.js';
 import { liveAwsRouter } from './api/liveAwsRoutes.js';
+import { rcaRouter } from './api/rcaRoutes.js';
 import { AwsCredentialManager } from './aws/credentials.js';
 
 // Export domain types and functions for direct programmatic usage
@@ -23,6 +24,13 @@ export * from './collector/cloudTrailCollector.js';
 export * from './collector/telemetryCoordinator.js';
 export * from './generator/sampleOutageGenerator.js';
 export * from './store/incidentStore.js';
+export * from './engine/buildDependencyGraph.js';
+export * from './engine/ragRetriever.js';
+export * from './engine/confidenceScorer.js';
+export {
+  AgentExecutionEngine,
+  type DiagnosisReport,
+} from './engine/agentExecutionEngine.js';
 
 dotenv.config();
 
@@ -42,6 +50,7 @@ export function createServer() {
   app.use('/api/handoff', handoffRouter);
   app.use('/api/scenarios', scenarioRouter);
   app.use('/api/aws', liveAwsRouter);
+  app.use('/api/rca', rcaRouter);
 
   // Status & Health Check
   app.get('/api/health', (_req, res) => {
@@ -49,41 +58,41 @@ export function createServer() {
     res.json({
       status: 'healthy',
       service: 'arch-automation-telemetry',
-      version: '1.0.0',
-      uptime: process.uptime(),
-      credentials: credStatus,
       timestamp: new Date().toISOString(),
+      awsIntegration: {
+        configured: credStatus.hasCredentials,
+        source: credStatus.source,
+        region: credStatus.region,
+      },
     });
   });
 
-  // Serve Dark-Mode Log & Payload Inspector UI
-  const publicDir = path.join(__dirname, 'public');
+  // Serve Dark-Mode Dashboard Static UI
+  const publicDir = path.resolve(__dirname, 'public');
   app.use(express.static(publicDir));
 
-  // SPA fallback
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
-      return next();
-    }
+  // Fallback to index.html for SPA
+  app.get('*', (_req, res) => {
     res.sendFile(path.join(publicDir, 'index.html'));
   });
 
   return app;
 }
 
-// Start standalone server when executed directly
-const PORT = process.env.PORT || 4000;
-if (process.env.NODE_ENV !== 'test') {
+export function startServer(port = process.env.PORT || 4000) {
   const app = createServer();
-  app.listen(PORT, () => {
-    const credStatus = AwsCredentialManager.getStatus();
-    console.log(`\n=============================================================`);
-    console.log(`🚀 ArchAutomation Telemetry & Handoff Pipeline Service`);
-    console.log(`📡 Server listening on: http://localhost:${PORT}`);
-    console.log(`📊 Dark-Mode Dashboard: http://localhost:${PORT}`);
-    console.log(`⚡ Webhook Endpoint:    http://localhost:${PORT}/api/webhooks/aws-alarm`);
-    console.log(`🤝 Handoff Incidents:   http://localhost:${PORT}/api/handoff/incidents`);
-    console.log(`☁️ AWS Mode:            ${credStatus.isSimulated ? 'Simulated (Offline Safe)' : credStatus.source}`);
-    console.log(`=============================================================\n`);
+  const server = app.listen(port, () => {
+    console.log(`\n🚀 ArchAutomation Service Running on http://localhost:${port}`);
+    console.log(`   - UI Inspector:          http://localhost:${port}`);
+    console.log(`   - Ingestion Webhook:     POST http://localhost:${port}/api/webhooks/aws-alarm`);
+    console.log(`   - Gargi RCA Diagnose:    POST http://localhost:${port}/api/rca/diagnose`);
+    console.log(`   - Interactive Incident Q&A: POST http://localhost:${port}/api/rca/chat`);
+    console.log(`   - Health Status:         GET  http://localhost:${port}/api/health\n`);
   });
+  return server;
+}
+
+// Auto-start if executed directly
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startServer();
 }

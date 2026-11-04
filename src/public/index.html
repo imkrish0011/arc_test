@@ -1,52 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ArchAutomation - AWS Telemetry & RCA Handoff Inspector</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArchAutomation — Telemetry & Gargi RCA Test Inspector</title>
+  <link rel="stylesheet" href="styles.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="dark-theme">
   <!-- Top Navigation -->
   <header class="app-header">
     <div class="header-left">
-      <div class="logo-badge">
-        <svg class="cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
-        </svg>
+      <div class="brand-logo">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+        <span>ArchAutomation</span>
       </div>
-      <div>
-        <h1 class="app-title">ArchAutomation <span>Telemetry Pipeline</span></h1>
-        <p class="app-subtitle">AWS Telemetry Ingestion, CloudWatch/CloudTrail Filtering & Gargi RCA Handoff</p>
-      </div>
+      <span class="header-divider">/</span>
+      <span class="header-subtitle">Krish ➔ Gargi RCA Engine & Testing Hub</span>
     </div>
+
     <div class="header-right">
-      <div id="aws-status-badge" class="status-pill status-simulated">
-        <span class="status-dot"></span>
-        <span id="aws-status-text">AWS Mode: Simulated</span>
+      <div class="env-badge" id="aws-status-badge">
+        <span class="indicator-dot"></span>
+        <span id="aws-status-text">AWS Mode: Initializing...</span>
       </div>
-      <button id="btn-copy-json" class="btn btn-secondary" title="Copy raw alertPayload.json">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-        Copy JSON
+
+      <button id="btn-run-rca" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Run Gargi RCA
       </button>
-      <button id="btn-download-json" class="btn btn-secondary" title="Download alertPayload.json">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-        Download
-      </button>
-      <button id="btn-send-gargi" class="btn btn-primary pulse-glow">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Send Payload to Gargi's Engine
+
+      <button id="btn-dispatch-handoff" class="btn btn-primary">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Send to Gargi Engine
       </button>
     </div>
   </header>
 
-  <main class="main-container">
-    <!-- Scenario Selector Bar -->
-    <section class="scenario-toolbar">
-      <div class="scenario-label">Target Failure Scenarios:</div>
+  <!-- Main Container -->
+  <main class="dashboard-grid">
+    <!-- Top Bar: Scenario Selector -->
+    <section class="scenario-selector-panel">
+      <div class="panel-header-compact">
+        <span class="panel-tag">Failure Scenarios</span>
+        <span class="panel-helper">Select any target AWS failure scenario to trigger telemetry and test Gargi's RCA:</span>
+      </div>
       <div class="scenario-buttons">
         <button class="btn-scenario active" data-scenario="rds_bottleneck">
           <span class="sc-badge sc-db">RDS</span>
@@ -114,29 +114,130 @@
     <!-- Inspector Tabs -->
     <section class="inspector-panel">
       <div class="tabs-header">
-        <button class="tab-btn active" data-tab="tab-logs">
+        <button class="tab-btn active" data-tab="tab-rca">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+          🔬 Gargi RCA Diagnostics
+          <span id="tab-rca-badge" class="tab-badge" style="background:#0284c7; color:#fff;">Live</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-logs">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="10" y1="3" y2="21"/></svg>
-          Filtered 30m CloudWatch Logs
+          Filtered 30m Logs
           <span id="tab-logs-count" class="tab-badge">6</span>
         </button>
         <button class="tab-btn" data-tab="tab-trail">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          60m CloudTrail Events
+          60m CloudTrail
           <span id="tab-trail-count" class="tab-badge">2</span>
         </button>
         <button class="tab-btn" data-tab="tab-canvas">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
-          ArchViz Canvas Graph
+          ArchViz Topology
           <span id="tab-nodes-count" class="tab-badge">3 Nodes</span>
         </button>
         <button class="tab-btn" data-tab="tab-json">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-          alertPayload.json Contract
+          Handoff 1 JSON
         </button>
       </div>
 
+      <!-- Tab Content 0: Gargi RCA Diagnostics UI -->
+      <div id="tab-rca" class="tab-content active">
+        <div class="rca-dashboard-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem; padding:1.25rem;">
+          
+          <!-- Column 1: Diagnosis Report Card -->
+          <div class="rca-card" style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #1e293b; padding-bottom:0.75rem;">
+              <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem; color:#f8fafc;">
+                <span style="color:#38bdf8;">⚡</span>
+                Gargi's Root Cause Diagnosis
+              </h3>
+              <span id="rca-confidence-pill" style="background:#065f46; color:#34d399; font-weight:700; font-size:0.85rem; padding:0.25rem 0.65rem; border-radius:999px;">
+                95% Confidence
+              </span>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:0.85rem; font-size:0.9rem;">
+              <div>
+                <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.25rem;">Pinpointed Root Node</span>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span id="rca-root-node" style="background:#ef4444; color:#fff; font-weight:700; padding:0.2rem 0.5rem; border-radius:4px; font-family:'JetBrains Mono',monospace;">node-rds-01</span>
+                  <span id="rca-root-resource" style="color:#94a3b8; font-size:0.8rem; font-family:'JetBrains Mono',monospace; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">arn:aws:rds:...</span>
+                </div>
+              </div>
+
+              <div>
+                <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.25rem;">Root Cause Summary</span>
+                <p id="rca-summary" style="margin:0; color:#e2e8f0; line-height:1.45;">Evaluating telemetry...</p>
+              </div>
+
+              <div>
+                <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.25rem;">Key Log Evidence Line</span>
+                <div id="rca-evidence-line" style="background:#090d16; border-left:3px solid #ef4444; padding:0.6rem 0.85rem; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:#fca5a5; word-break:break-all;">
+                  Loading evidence line...
+                </div>
+              </div>
+
+              <div>
+                <span style="color:#64748b; font-size:0.75rem; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.25rem;">Handoff 2 Fix Intent (for Sweta)</span>
+                <div style="display:flex; align-items:center; gap:0.5rem;">
+                  <span id="rca-fix-intent" style="background:#0284c7; color:#fff; font-weight:700; padding:0.25rem 0.65rem; border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:0.85rem;">
+                    UPGRADE_RDS_INSTANCE
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mathematical Confidence Breakdown -->
+              <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:8px; padding:0.75rem; margin-top:0.5rem;">
+                <span style="color:#94a3b8; font-size:0.75rem; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.5rem;">
+                  Mathematical Scoring Breakdown (4-Signal Formula)
+                </span>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.8rem;">
+                  <div>Log Code Match: <strong id="score-log" style="color:#38bdf8;">+40%</strong></div>
+                  <div>CloudTrail Mutated: <strong id="score-trail" style="color:#38bdf8;">+25%</strong></div>
+                  <div>Metric &gt; 90%: <strong id="score-metric" style="color:#38bdf8;">+20%</strong></div>
+                  <div>Runbook Matched: <strong id="score-runbook" style="color:#38bdf8;">+15%</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Interactive Incident Q&A Assistant (Task 4) -->
+          <div class="rca-card" style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem; display:flex; flex-direction:column;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; border-bottom:1px solid #1e293b; padding-bottom:0.75rem;">
+              <h3 style="margin:0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem; color:#f8fafc;">
+                <span style="color:#a855f7;">💬</span>
+                Interactive Incident Q&A Assistant
+              </h3>
+              <span style="font-size:0.75rem; color:#64748b;">Task 4 Drawer</span>
+            </div>
+
+            <!-- Chat message log -->
+            <div id="rca-chat-log" style="flex:1; min-height:240px; max-height:280px; overflow-y:auto; background:#0b0f19; border:1px solid #1e293b; border-radius:8px; padding:0.85rem; display:flex; flex-direction:column; gap:0.75rem; font-size:0.85rem;">
+              <div style="background:#1e293b; padding:0.6rem 0.85rem; border-radius:6px; color:#cbd5e1;">
+                <strong>Gargi AI Assistant:</strong> Ask any question about this incident (e.g. <em>"Why did it fail?"</em>, <em>"What fix does Sweta need?"</em>, or <em>"Show recent logs"</em>).
+              </div>
+            </div>
+
+            <!-- Quick sample questions -->
+            <div style="display:flex; gap:0.4rem; margin-top:0.75rem; flex-wrap:wrap;">
+              <button class="btn btn-xs btn-secondary btn-quick-qa" data-q="Why did this resource fail?">Why did it fail?</button>
+              <button class="btn btn-xs btn-secondary btn-quick-qa" data-q="What is the recommended fix for Sweta?">What is the fix?</button>
+              <button class="btn btn-xs btn-secondary btn-quick-qa" data-q="Which alerts were deduplicated?">Alert deduplication?</button>
+              <button class="btn btn-xs btn-secondary btn-quick-qa" data-q="Show the critical logs">Show logs</button>
+            </div>
+
+            <!-- Chat input -->
+            <form id="rca-chat-form" style="display:flex; gap:0.5rem; margin-top:0.75rem;">
+              <input type="text" id="rca-chat-input" placeholder="Ask a diagnostic question..." style="flex:1; background:#0b0f19; border:1px solid #334155; color:#fff; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.85rem;" required>
+              <button type="submit" class="btn btn-primary" style="padding:0.5rem 1rem;">Ask</button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+
       <!-- Tab Content 1: Filtered Logs -->
-      <div id="tab-logs" class="tab-content active">
+      <div id="tab-logs" class="tab-content">
         <div class="log-filter-controls">
           <div class="filter-pills">
             <button class="filter-pill active" data-level="ALL">All Levels</button>
@@ -235,32 +336,40 @@
         <button id="live-modal-close" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
+        <p style="color:var(--text-secondary); margin-bottom:1.5rem; font-size:0.9rem;">
+          Simulate a real-time CloudWatch alarm event for a specific AWS resource. The coordinator will probe your configured AWS account for candidate log groups and CloudTrail mutations.
+        </p>
+
         <div class="form-group">
-          <label>AWS Resource ID / ARN</label>
-          <input type="text" id="live-input-resource" class="form-input" placeholder="e.g. arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary or db-instance-id" />
+          <label>Target AWS Resource ID / ARN</label>
+          <input type="text" id="live-input-resource" placeholder="e.g. arn:aws:rds:us-east-1:123456789012:db:production-db" value="arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary">
         </div>
-        <div class="form-group">
-          <label>Alarm Name</label>
-          <input type="text" id="live-input-alarm" class="form-input" value="Custom-CloudWatch-Alarm" />
-        </div>
-        <div class="form-row">
+
+        <div class="form-grid-2">
           <div class="form-group">
-            <label>Metric Name</label>
-            <input type="text" id="live-input-metric" class="form-input" value="CPUUtilization" />
+            <label>Alarm Name</label>
+            <input type="text" id="live-input-alarm" value="RDS-CPU-High-Spike">
           </div>
           <div class="form-group">
-            <label>Metric Value</label>
-            <input type="number" id="live-input-val" class="form-input" value="95" />
+            <label>Metric Name</label>
+            <input type="text" id="live-input-metric" value="CPUUtilization">
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Current Value</label>
+            <input type="number" id="live-input-val" value="98.5">
           </div>
           <div class="form-group">
             <label>Threshold</label>
-            <input type="number" id="live-input-thresh" class="form-input" value="80" />
+            <input type="number" id="live-input-thresh" value="90">
           </div>
         </div>
       </div>
       <div class="modal-footer">
         <button id="btn-cancel-live" class="btn btn-secondary">Cancel</button>
-        <button id="btn-submit-live" class="btn btn-primary">Collect & Ingest Telemetry</button>
+        <button id="btn-submit-live" class="btn btn-primary">Trigger Ingestion</button>
       </div>
     </div>
   </div>

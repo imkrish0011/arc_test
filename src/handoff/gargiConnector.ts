@@ -1,5 +1,6 @@
 import type { AlertPayload, HandoffResult } from '../types/alertPayload.js';
 import { WebhookDispatcher } from './webhookDispatcher.js';
+import { runAutomatedRcaPipeline as executeGargiPipeline, type DiagnosisReport } from '../engine/agentExecutionEngine.js';
 
 export type RcaPipelineHandler = (alertPayload: AlertPayload) => Promise<any>;
 
@@ -82,10 +83,6 @@ export function validateAlertPayloadContract(payload: AlertPayload): { valid: bo
 
 /**
  * Gargi's Entry Hook: runAutomatedRcaPipeline(alertPayload)
- * 
- * If Gargi has registered an in-process engine handler, calls that directly.
- * Otherwise, checks if GARGI_RCA_WEBHOOK_URL is configured to forward via HTTP,
- * or runs the built-in diagnostic contract verification runner.
  */
 export async function runAutomatedRcaPipeline(alertPayload: AlertPayload): Promise<HandoffResult> {
   const validation = validateAlertPayloadContract(alertPayload);
@@ -135,13 +132,20 @@ export async function runAutomatedRcaPipeline(alertPayload: AlertPayload): Promi
     }
   }
 
-  // 3. Simulated engine acceptance (standard for offline / decoupling)
+  // 3. Execute built-in Diagnostic RCA Engine and attach DiagnosisReport
+  let diagnosisReport: DiagnosisReport | null = null;
+  try {
+    diagnosisReport = await executeGargiPipeline(alertPayload);
+  } catch {
+    // Keep resilient fallback for basic ping/mock calls
+  }
+
   return {
     success: true,
     incidentId: alertPayload.incidentId,
     deliveredAt,
     target: 'Simulated Gargi Diagnostic RCA Engine Interface',
-    response: {
+    response: (diagnosisReport as unknown as Record<string, unknown>) || {
       message: 'Payload verified against Handoff Contract 1 and successfully queued for RCA graph traversal.',
       activeAlarmsCount: alertPayload.activeAlarms.length,
       filteredLogsCount: alertPayload.cloudWatchLogs30m.length,
