@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArchAutomation - AWS Telemetry & RCA Handoff Inspector</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation -->
+  <header class="app-header">
+    <div class="header-left">
+      <div class="logo-badge">
+        <svg class="cloud-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="app-title">ArchAutomation <span>Telemetry Pipeline</span></h1>
+        <p class="app-subtitle">AWS Telemetry Ingestion, CloudWatch/CloudTrail Filtering & Gargi RCA Handoff</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="aws-status-badge" class="status-pill status-simulated">
+        <span class="status-dot"></span>
+        <span id="aws-status-text">AWS Mode: Simulated</span>
+      </div>
+      <button id="btn-copy-json" class="btn btn-secondary" title="Copy raw alertPayload.json">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        Copy JSON
+      </button>
+      <button id="btn-download-json" class="btn btn-secondary" title="Download alertPayload.json">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        Download
+      </button>
+      <button id="btn-send-gargi" class="btn btn-primary pulse-glow">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send Payload to Gargi's Engine
+      </button>
+    </div>
+  </header>
+
+  <main class="main-container">
+    <!-- Scenario Selector Bar -->
+    <section class="scenario-toolbar">
+      <div class="scenario-label">Target Failure Scenarios:</div>
+      <div class="scenario-buttons">
+        <button class="btn-scenario active" data-scenario="rds_bottleneck">
+          <span class="sc-badge sc-db">RDS</span>
+          <span class="sc-title">RDS Database Bottleneck</span>
+        </button>
+        <button class="btn-scenario" data-scenario="container_crashloop">
+          <span class="sc-badge sc-compute">ECS</span>
+          <span class="sc-title">Container CrashLoop (OOM)</span>
+        </button>
+        <button class="btn-scenario" data-scenario="security_group_drift">
+          <span class="sc-badge sc-sec">SEC</span>
+          <span class="sc-title">Security Group Drift (Port 22/5432)</span>
+        </button>
+        <button class="btn-scenario" data-scenario="api_5xx_timeouts">
+          <span class="sc-badge sc-net">API</span>
+          <span class="sc-title">API 5xx Timeouts (3s Limit)</span>
+        </button>
+        <button class="btn-scenario" data-scenario="finops_idle_waste">
+          <span class="sc-badge sc-cost">FIN</span>
+          <span class="sc-title">FinOps Idle Waste (EBS/NAT)</span>
+        </button>
+        <button class="btn-scenario btn-live-trigger" id="btn-open-live-modal">
+          <span class="sc-badge sc-live">LIVE</span>
+          <span class="sc-title">Live AWS Trigger</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Incident Info Card -->
+    <section class="incident-card">
+      <div class="incident-meta">
+        <div class="meta-item">
+          <span class="meta-label">Incident ID</span>
+          <span id="incident-id" class="meta-val highlight-id">inc-rds-bottleneck</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Triggered At</span>
+          <span id="incident-time" class="meta-val">2026-11-04T12:00:00Z</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Contract Status</span>
+          <span class="meta-val contract-badge">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Handoff 1 Compliant
+          </span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Gargi Handoff Status</span>
+          <span id="handoff-status-badge" class="status-pill status-ready">Ready for Handoff</span>
+        </div>
+      </div>
+
+      <!-- Active Alarms Banner -->
+      <div class="active-alarms-container">
+        <div class="section-title-sm">
+          <span>Active AWS Alarms</span>
+          <span id="alarms-count-badge" class="count-tag">4 Active</span>
+        </div>
+        <div id="alarms-list" class="alarms-grid">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Inspector Tabs -->
+    <section class="inspector-panel">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-logs">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="10" y1="3" y2="21"/></svg>
+          Filtered 30m CloudWatch Logs
+          <span id="tab-logs-count" class="tab-badge">6</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-trail">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          60m CloudTrail Events
+          <span id="tab-trail-count" class="tab-badge">2</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-canvas">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>
+          ArchViz Canvas Graph
+          <span id="tab-nodes-count" class="tab-badge">3 Nodes</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-json">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          alertPayload.json Contract
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Filtered Logs -->
+      <div id="tab-logs" class="tab-content active">
+        <div class="log-filter-controls">
+          <div class="filter-pills">
+            <button class="filter-pill active" data-level="ALL">All Levels</button>
+            <button class="filter-pill pill-fatal" data-level="FATAL">FATAL</button>
+            <button class="filter-pill pill-error" data-level="ERROR">ERROR</button>
+            <button class="filter-pill pill-timeout" data-level="TIMEOUT">TIMEOUT</button>
+            <button class="filter-pill pill-warn" data-level="WARN">WARN</button>
+          </div>
+          <div class="log-note">
+            <span>ℹ️ Pre-filter: Stripped 450+ noisy INFO/DEBUG lines. Preserved errors & root-cause indicators.</span>
+          </div>
+        </div>
+        <div class="log-table-wrapper">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th width="160">Timestamp</th>
+                <th width="100">Level</th>
+                <th width="130">Canvas Node</th>
+                <th width="240">AWS Resource</th>
+                <th>Filtered Log Message</th>
+              </tr>
+            </thead>
+            <tbody id="logs-table-body">
+              <!-- Logs populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: CloudTrail Events -->
+      <div id="tab-trail" class="tab-content">
+        <div class="trail-list" id="trail-list-container">
+          <!-- CloudTrail events populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab Content 3: ArchViz Canvas Graph -->
+      <div id="tab-canvas" class="tab-content">
+        <div class="canvas-preview">
+          <div class="canvas-instructions">
+            <span>Visual representation of connected cloud resources in ArchViz canvas topology:</span>
+          </div>
+          <div class="graph-nodes-flow" id="canvas-nodes-container">
+            <!-- Dynamic nodes & edges -->
+          </div>
+          <div class="graph-edges-list">
+            <h4>Canvas Graph Edges:</h4>
+            <div id="canvas-edges-container" class="edges-tags">
+              <!-- Edges -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 4: JSON Contract -->
+      <div id="tab-json" class="tab-content">
+        <div class="json-viewer-header">
+          <span>Strict Contract Schema: <code>AlertPayload</code> (Handoff 1)</span>
+          <button id="btn-copy-code" class="btn btn-xs btn-secondary">Copy</button>
+        </div>
+        <pre class="json-code-block"><code id="raw-json-output">Loading payload...</code></pre>
+      </div>
+    </section>
+  </main>
+
+  <!-- Handoff Result Modal -->
+  <div id="handoff-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </div>
+          <div>
+            <h3>Handoff to Gargi's Diagnostic Engine</h3>
+            <p id="handoff-modal-subtitle">Transmitting structured AlertPayload...</p>
+          </div>
+        </div>
+        <button id="modal-close-btn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body-content">
+        <!-- Live status -->
+      </div>
+      <div class="modal-footer">
+        <button id="modal-ok-btn" class="btn btn-primary">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Trigger Modal -->
+  <div id="live-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Trigger Live AWS Telemetry Ingest</h3>
+        <button id="live-modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>AWS Resource ID / ARN</label>
+          <input type="text" id="live-input-resource" class="form-input" placeholder="e.g. arn:aws:rds:us-east-1:123456789012:db:aurora-pg-orders-primary or db-instance-id" />
+        </div>
+        <div class="form-group">
+          <label>Alarm Name</label>
+          <input type="text" id="live-input-alarm" class="form-input" value="Custom-CloudWatch-Alarm" />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Metric Name</label>
+            <input type="text" id="live-input-metric" class="form-input" value="CPUUtilization" />
+          </div>
+          <div class="form-group">
+            <label>Metric Value</label>
+            <input type="number" id="live-input-val" class="form-input" value="95" />
+          </div>
+          <div class="form-group">
+            <label>Threshold</label>
+            <input type="number" id="live-input-thresh" class="form-input" value="80" />
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-live" class="btn btn-secondary">Cancel</button>
+        <button id="btn-submit-live" class="btn btn-primary">Collect & Ingest Telemetry</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

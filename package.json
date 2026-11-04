@@ -1,0 +1,47 @@
+{
+  "name": "archviz-autonomous",
+  "version": "1.0.0",
+  "description": "AWS Telemetry Ingestion, Log Filtering, and Data Transfer Pipeline for ArchViz & Gargi's Diagnostic RCA Engine",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc && node scripts/copy-public.cjs",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "simulate": "tsx scripts/simulate-alarm.ts",
+    "inspect": "tsx scripts/inspect-payload.ts"
+  },
+  "keywords": [
+    "aws",
+    "telemetry",
+    "cloudwatch",
+    "cloudtrail",
+    "rca",
+    "archviz",
+    "incident-management"
+  ],
+  "author": "Krish (Principal Cloud Infrastructure & Backend Engineer)",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-cloudtrail": "^3.758.0",
+    "@aws-sdk/client-cloudwatch": "^3.758.0",
+    "@aws-sdk/client-cloudwatch-logs": "^3.758.0",
+    "@aws-sdk/client-ec2": "^3.758.0",
+    "@aws-sdk/client-elastic-load-balancing-v2": "^3.1161.0",
+    "@aws-sdk/client-rds": "^3.758.0",
+    "@aws-sdk/client-sts": "^3.758.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.5",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
+  }
+}
