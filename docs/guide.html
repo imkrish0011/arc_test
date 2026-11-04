@@ -616,10 +616,100 @@
   <div class="callout callout-amber">
     <div class="callout-title">Krish's Next Engineering Steps</div>
     <ol style="margin-left: 18px; margin-top: 4px; font-size: 8.5pt; color: #78350f;">
-      <li style="margin-bottom: 5px;"><strong>Give Gargi the Handoff 1 Contract:</strong> Share <code>src/types/alertPayload.ts</code> and sample payload files (e.g. <code>alertPayload-container_crashloop.json</code>) so she can write her unit tests against real data.</li>
+      <li style="margin-bottom: 5px;"><strong>Give Gargi the Handoff 1 Contract & Datasets:</strong> Share <code>src/types/alertPayload.ts</code> and the 5 pre-generated JSON files in <code>datasets/</code> (or link her to the GitHub repo).</li>
       <li style="margin-bottom: 5px;"><strong>Wire Gargi's Entry Hook:</strong> When Gargi pushes her <code>runAutomatedRcaPipeline</code>, wire it into <code>src/handoff/gargiConnector.ts</code> so live alerts flow straight into her module.</li>
       <li style="margin-bottom: 5px;"><strong>Prepare the Approval Execution Engine (Weeks 5–6):</strong> Once Sweta delivers Handoff 3 (Verified Fix Package), build the 1-click execution routine that calls the AWS SDK v3 to apply the approved change to the user's AWS account.</li>
     </ol>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- SECTION 8: DATASETS FOR GARGI -->
+  <h2>8. Datasets for Gargi: What to Give Her & How to Get More</h2>
+
+  <p>
+    Gargi is asking for <strong>datasets</strong> because her AI pipeline (RAG vector search, alert deduplication, and confidence scoring) cannot be trained or tested without real, structured cloud telemetry.
+  </p>
+
+  <h3>A. Exactly What Files to Give Gargi (Already Prepared in <code>datasets/</code>):</h3>
+  <table>
+    <thead>
+      <tr>
+        <th width="200">Dataset File (in <code>datasets/</code>)</th>
+        <th width="140">Target Failure Scenario</th>
+        <th>What It Contains for Gargi's AI</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>alertPayload-rds_bottleneck.json</code></td>
+        <td>RDS Database Bottleneck</td>
+        <td>4 alarms (RDS CPU 96%, Conn 498/500, Lambda Cascading, APIGW 504), 6 filtered logs (<code>FATAL: remaining connection slots reserved</code>), CloudTrail <code>ModifyDBParameterGroup</code>, and Canvas Graph (APIGW ➔ Lambda ➔ RDS).</td>
+      </tr>
+      <tr>
+        <td><code>alertPayload-container_crashloop.json</code></td>
+        <td>ECS/EKS Container CrashLoop</td>
+        <td>2 alarms (StopCount: 7, Unhealthy Hosts: 5), 5 logs (<code>Exit Code 137 OutOfMemoryError</code>, V8 JS heap out of memory), CloudTrail <code>RegisterTaskDefinition</code> (memory cut to 512MB), Canvas Graph (ALB ➔ ECS ➔ Redis).</td>
+      </tr>
+      <tr>
+        <td><code>alertPayload-security_group_drift.json</code></td>
+        <td>Security Group Drift</td>
+        <td>2 alarms (Config non-compliant, GuardDuty portscan), 4 logs (unauthorized SSH/DB handshakes), CloudTrail <code>AuthorizeSecurityGroupIngress</code> (0.0.0.0/0 on port 22/5432), Canvas Graph (Internet ➔ SG ➔ RDS).</td>
+      </tr>
+      <tr>
+        <td><code>alertPayload-api_5xx_timeouts.json</code></td>
+        <td>API 5xx Timeouts</td>
+        <td>3 alarms (TargetResponseTime: 3450ms, 5xx rate: 48%), 5 logs (Lambda <code>Task timed out after 3.00 seconds</code>, ALB 504), CloudTrail <code>PutScalingPolicy</code>, Canvas Graph (CloudFront ➔ ALB ➔ Lambda ➔ DynamoDB).</td>
+      </tr>
+      <tr>
+        <td><code>alertPayload-finops_idle_waste.json</code></td>
+        <td>FinOps Idle Waste</td>
+        <td>2 alarms (0 IOPS for 7 days, 0 bytes on NAT GW), 3 logs (AWS Cost Anomaly Detection alert: $125/mo waste), CloudTrail <code>DetachVolume</code>, Canvas Graph (Orphaned EBS & NAT Gateway).</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>B. How Gargi Uses These Datasets:</h3>
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">1. Graph Alert Deduplication</div>
+      <div class="card-text">
+        In <code>alertPayload-rds_bottleneck.json</code>, there are 4 separate alarms. Gargi feeds <code>canvasGraph</code> into her <code>findRootFailingNode(activeAlarms, graph)</code> function to prove her graph algorithm collapses the APIGW and Lambda errors down to <code>node-rds-01</code>.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">2. Runbook Vector Search (RAG)</div>
+      <div class="card-text">
+        Gargi feeds the <code>cloudWatchLogs30m</code> error lines (e.g. <code>FATAL: remaining connection slots are reserved</code>) into her vector database to verify that her embedding search correctly retrieves the RDS Runbook and outputs <code>UPGRADE_RDS_INSTANCE</code>.
+      </div>
+    </div>
+  </div>
+
+  <h3>C. How YOU (Krish) Get Fresh or Live Data for Her:</h3>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-title">Method 1: The CLI Tool</div>
+      <div class="card-text">
+        Run anytime from the terminal:<br>
+        <code>npm run simulate -- --scenario container_crashloop --save</code><br>
+        Exports a freshly timestamped JSON file ready to send to Gargi.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Method 2: The Web Dashboard</div>
+      <div class="card-text">
+        Open <code>http://localhost:4000</code>.<br>
+        Click any of the 5 scenario buttons or click <strong>Live AWS Trigger</strong> to enter a real AWS resource ARN, then click <strong>Download JSON</strong> or <strong>Copy JSON</strong>.
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Method 3: Live User AWS Query</div>
+      <div class="card-text">
+        Call the backend API with the user's AWS credentials/role:<br>
+        <code>POST /api/aws/live-collect</code><br>
+        It automatically queries the real CloudWatch logs and CloudTrail from that AWS account and returns the formatted payload!
+      </div>
+    </div>
   </div>
 
   <p style="text-align: center; color: #94a3b8; font-size: 7.5pt; margin-top: 20px;">
