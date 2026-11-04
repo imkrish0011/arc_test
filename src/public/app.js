@@ -5,6 +5,14 @@ let activeLogLevel = 'ALL';
 let currentReport = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('scenario')) {
+    currentScenario = urlParams.get('scenario');
+    document.querySelectorAll('.btn-scenario').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-scenario') === currentScenario);
+    });
+  }
+
   initTabs();
   initScenarioButtons();
   initActionButtons();
@@ -13,6 +21,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initRcaChat();
   checkAwsStatus();
   loadScenario(currentScenario);
+
+  if (urlParams.has('tab')) {
+    const tabId = urlParams.get('tab');
+    setTimeout(() => {
+      const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+      if (tabBtn) tabBtn.click();
+    }, 150);
+  }
 });
 
 // Check AWS Credential Status
