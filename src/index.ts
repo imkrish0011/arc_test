@@ -40,6 +40,11 @@ export {
   SolutionEngine,
   synthesizeRemediationPackage,
 } from './remediation/solutionEngine.js';
+export * from './remediation/remediationExecutor.js';
+export * from './remediation/verificationLoop.js';
+export * from './remediation/githubPrGenerator.js';
+export * from './remediation/slackCardFormatter.js';
+export * from './store/tenantContext.js';
 
 dotenv.config();
 

@@ -470,18 +470,73 @@ function initActionButtons() {
     showToast("Sweta's Verified Remediation Package Synthesized!");
   });
 
-  // 1-Click Approval Execution Modal
-  document.getElementById('btn-approve-apply-fix').addEventListener('click', () => {
+  // 1-Click Approval Execution Modal (Connected to Live Backend Remediation APIs)
+  document.getElementById('btn-approve-apply-fix').addEventListener('click', async () => {
     if (!currentRemediation) return;
     const modal = document.getElementById('approval-modal');
-    
-    // Customize modal text based on active fix
-    const action = currentRemediation.awsSdkAction;
-    document.getElementById('appr-step-aws').innerText = `${action.command} applied to ${action.service.toUpperCase()} (ApplyImmediately: true) in 1.2s`;
-    document.getElementById('appr-step-git').innerText = `Pull Request #42 opened with Terraform Diff (${currentRemediation.costImpactMonthly.formattedDelta})`;
-    
     modal.classList.remove('hidden');
-    showToast('Autonomous Fix Approved & Dispatched to AWS!');
+
+    document.getElementById('appr-step-aws').innerText = 'Dispatching AWS SDK v3 action to cloud infrastructure...';
+    document.getElementById('appr-step-git').innerText = 'Generating GitOps Pull Request...';
+    document.getElementById('appr-step-snap').innerText = 'Creating pre-remediation safety rollback snapshot...';
+    document.getElementById('appr-step-metric').innerText = 'Initiating post-fix telemetry verification loop...';
+
+    try {
+      // 1. Live/Simulated AWS Execution
+      const applyRes = await fetch('/api/remediation/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incidentId: currentReport?.incidentId || currentRemediation.incidentId,
+          fixPackage: currentRemediation,
+        }),
+      });
+      const applyData = await applyRes.json();
+      if (applyData.success && applyData.result) {
+        const r = applyData.result;
+        document.getElementById('appr-step-aws').innerText = `${r.command} applied to ${r.service.toUpperCase()} in ${r.durationMs}ms (${r.status})`;
+        if (r.snapshotCreated) {
+          document.getElementById('appr-step-snap').innerText = `Safety backup confirmed: ${r.snapshotCreated.snapshotId} (${r.snapshotCreated.action})`;
+        } else {
+          document.getElementById('appr-step-snap').innerText = `Safety rollback state captured in GitOps commit history`;
+        }
+      }
+
+      // 2. Mode A: GitOps Pull Request Creation
+      const prRes = await fetch('/api/remediation/create-pr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          incidentId: currentReport?.incidentId || currentRemediation.incidentId,
+          fixPackage: currentRemediation,
+        }),
+      });
+      const prData = await prRes.json();
+      if (prData.success && prData.pr) {
+        document.getElementById('appr-step-git').innerText = `Pull Request #${prData.pr.prNumber} opened: ${prData.pr.prUrl} (${currentRemediation.costImpactMonthly.formattedDelta})`;
+      }
+
+      // 3. Post-Remediation Verification Loop
+      const verifyRes = await fetch(`/api/remediation/verify/${currentReport?.incidentId || currentRemediation.incidentId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          awsResourceId: currentReport?.awsResourceId,
+          metricName: currentRemediation.simulationResult.metricName,
+          threshold: currentRemediation.simulationResult.threshold,
+        }),
+      });
+      const verifyData = await verifyRes.json();
+      if (verifyData.report) {
+        const v = verifyData.report;
+        document.getElementById('appr-step-metric').innerText = `CloudWatch Alarm transitioned to ${v.alarmState}. Metric: ${v.currentMetricValue} <= ${v.threshold}. Incident Status: ${v.incidentStatus}`;
+      }
+
+      showToast('Autonomous Fix Approved, Executed & Verified!');
+    } catch (err) {
+      console.error('Approval execution error:', err);
+      showToast('Execution notice: ' + err.message);
+    }
   });
 
   document.getElementById('approval-modal-close').addEventListener('click', () => {
