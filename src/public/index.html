@@ -73,6 +73,33 @@
           <span class="sc-badge sc-cost">FIN</span>
           <span class="sc-title">FinOps Idle Waste (EBS/NAT)</span>
         </button>
+        </div>
+
+      <div class="panel-header-compact" style="margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed rgba(255,255,255,0.1);">
+        <span class="panel-tag" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239,68,68,0.4);">Hardcore Cloud Failures</span>
+        <span class="panel-helper">Complex distributed system failures requiring architectural remediation (Circuit Breakers, DLQs, Lock Timeouts, DNS Caching, Secondary CIDRs) rather than naive scaling:</span>
+      </div>
+      <div class="scenario-buttons">
+        <button class="btn-scenario" data-scenario="retry_storm_thundering_herd">
+          <span class="sc-badge sc-storm">STORM</span>
+          <span class="sc-title">Cascading Retry Storm</span>
+        </button>
+        <button class="btn-scenario" data-scenario="database_deadlock_contention">
+          <span class="sc-badge sc-deadlock">LOCK</span>
+          <span class="sc-title">DB Deadlock &amp; Lock Contention</span>
+        </button>
+        <button class="btn-scenario" data-scenario="vpc_dns_starvation">
+          <span class="sc-badge sc-dns">DNS</span>
+          <span class="sc-title">VPC Route53 DNS Starvation</span>
+        </button>
+        <button class="btn-scenario" data-scenario="sqs_poison_pill_crashloop">
+          <span class="sc-badge sc-poison">POISON</span>
+          <span class="sc-title">SQS Poison Pill CrashLoop</span>
+        </button>
+        <button class="btn-scenario" data-scenario="subnet_ip_exhaustion">
+          <span class="sc-badge sc-cidr">CIDR</span>
+          <span class="sc-title">VPC Subnet IP Exhaustion</span>
+        </button>
         <button class="btn-scenario btn-live-trigger" id="btn-open-live-modal">
           <span class="sc-badge sc-live">LIVE</span>
           <span class="sc-title">Live AWS Trigger</span>

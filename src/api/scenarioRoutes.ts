@@ -46,6 +46,41 @@ const SCENARIOS: Array<{
     description: '0 IOPS / 0 active connections for 7 days on provisioned io2 EBS volume (status: available), and idle NAT Gateway with 0 BytesOut.',
     triggerMetrics: '7-Day IOPS: 0, 7-Day NAT Bytes: 0',
   },
+  {
+    id: 'retry_storm_thundering_herd',
+    name: 'Cascading Retry Storm (Thundering Herd)',
+    category: 'Resilience & Circuit Breaking',
+    description: 'Upstream HTTP 429 throttling, downstream 10x aggressive retry amplification without jitter, Envoy connection pool overflow.',
+    triggerMetrics: 'ThrottledRequests: 42,800/min, 5XX Rate: 78.4%',
+  },
+  {
+    id: 'database_deadlock_contention',
+    name: 'Database Deadlock & Lock Contention',
+    category: 'Database & Concurrency',
+    description: 'Postgres deadlock detected on relation "inventory", 488/500 connections blocked in Lock:tuple wait state, CPU 6% idle.',
+    triggerMetrics: 'Deadlocks: 342/min, BlockedSessions: 488/500',
+  },
+  {
+    id: 'vpc_dns_starvation',
+    name: 'VPC Route53 DNS Starvation (ENI Cap)',
+    category: 'Network & DNS',
+    description: 'AWS 1024 UDP pkt/s link-local ENI limit exceeded, 4,890 dropped packets, getaddrinfo EAI_AGAIN microservice stalls.',
+    triggerMetrics: 'LinkLocalPacketDrops: 4,890/min, DNSLatency: 5,200ms',
+  },
+  {
+    id: 'sqs_poison_pill_crashloop',
+    name: 'SQS Poison Pill Consumer CrashLoop',
+    category: 'Queues & Event-Driven',
+    description: 'Corrupted payload crashing all 12 ECS workers (Exit Code 1), infinite redelivery loop, oldest message age > 5 hours.',
+    triggerMetrics: 'AgeOfOldestMessage: 18,400s, TaskStops: 48/10m',
+  },
+  {
+    id: 'subnet_ip_exhaustion',
+    name: 'VPC Subnet IP Address Exhaustion',
+    category: 'VPC & IPAM',
+    description: 'Available IP address count = 0 in /24 subnet, Client.InsufficientFreeAddressesInSubnet halts ASG EC2 launches.',
+    triggerMetrics: 'AvailableIPs: 0/251, ASGLaunchFailures: 100%',
+  },
 ];
 
 scenarioRouter.get('/list', (_req: Request, res: Response): void => {

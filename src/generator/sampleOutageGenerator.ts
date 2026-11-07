@@ -5,6 +5,11 @@ import {
   SECURITY_GROUP_DRIFT_GRAPH,
   API_5XX_TIMEOUT_GRAPH,
   FINOPS_IDLE_WASTE_GRAPH,
+  RETRY_STORM_GRAPH,
+  DATABASE_DEADLOCK_GRAPH,
+  VPC_DNS_STARVATION_GRAPH,
+  SQS_POISON_PILL_GRAPH,
+  SUBNET_IP_EXHAUSTION_GRAPH,
 } from './mockGraphs.js';
 
 export type ScenarioType =
@@ -12,12 +17,17 @@ export type ScenarioType =
   | 'container_crashloop'
   | 'security_group_drift'
   | 'api_5xx_timeouts'
-  | 'finops_idle_waste';
+  | 'finops_idle_waste'
+  | 'retry_storm_thundering_herd'
+  | 'database_deadlock_contention'
+  | 'vpc_dns_starvation'
+  | 'sqs_poison_pill_crashloop'
+  | 'subnet_ip_exhaustion';
 
 export class SampleOutageGenerator {
   /**
    * Generates a complete AlertPayload matching the exact contract
-   * for any of the 5 AWS outage scenarios.
+   * for any of the AWS outage scenarios.
    */
   public static generate(scenario: ScenarioType, customIncidentId?: string): AlertPayload {
     const triggeredAt = new Date().toISOString();
@@ -38,6 +48,21 @@ export class SampleOutageGenerator {
 
       case 'finops_idle_waste':
         return this.generateFinOpsIdleWaste(incidentId, triggeredAt);
+
+      case 'retry_storm_thundering_herd':
+        return this.generateRetryStormThunderingHerd(incidentId, triggeredAt);
+
+      case 'database_deadlock_contention':
+        return this.generateDatabaseDeadlockContention(incidentId, triggeredAt);
+
+      case 'vpc_dns_starvation':
+        return this.generateVpcDnsStarvation(incidentId, triggeredAt);
+
+      case 'sqs_poison_pill_crashloop':
+        return this.generateSqsPoisonPillCrashloop(incidentId, triggeredAt);
+
+      case 'subnet_ip_exhaustion':
+        return this.generateSubnetIpExhaustion(incidentId, triggeredAt);
 
       default:
         throw new Error(`Unknown scenario type: ${scenario}`);
@@ -540,6 +565,410 @@ export class SampleOutageGenerator {
         },
       ],
       canvasGraph: FINOPS_IDLE_WASTE_GRAPH,
+    };
+  }
+
+  // 6. Cascading Retry Storm & Thundering Herd
+  private static generateRetryStormThunderingHerd(incidentId: string, triggeredAt: string): AlertPayload {
+    const now = new Date(triggeredAt).getTime();
+    const tMinus = (mins: number) => new Date(now - mins * 60 * 1000).toISOString();
+
+    return {
+      incidentId,
+      triggeredAt,
+      activeAlarms: [
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:payment-vault-throttled-429',
+          alarmName: 'PaymentVault-ThrottledRequests-Critical',
+          nodeId: 'node-payment-vault',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/payment-token-vault',
+          metricName: 'ThrottledRequests',
+          metricValue: 42800,
+          threshold: 100,
+          timestamp: tMinus(4),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:checkout-503-service-unavailable',
+          alarmName: 'Checkout-503-ServiceUnavailable-Spike',
+          nodeId: 'node-checkout-svc',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/checkout-service',
+          metricName: '5XXError',
+          metricValue: 78.4,
+          threshold: 5.0,
+          timestamp: tMinus(2),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:edge-ingress-504-timeout',
+          alarmName: 'Edge-HTTP-504-GatewayTimeout',
+          nodeId: 'node-api-edge',
+          awsResourceId: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-edge-proxy/55aa66bb',
+          metricName: 'HTTPCode_Target_5XX_Count',
+          metricValue: 14200,
+          threshold: 50,
+          timestamp: tMinus(1),
+        },
+      ],
+      cloudWatchLogs30m: [
+        {
+          timestamp: tMinus(12),
+          nodeId: 'node-payment-vault',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/payment-token-vault',
+          level: 'FATAL',
+          message: 'upstream HTTP 429 Too Many Requests: token bucket rate limit exhausted. Throttling 42,800 callers/min. Immediate retry attempt 7/10 failed without jitter.',
+        },
+        {
+          timestamp: tMinus(8),
+          nodeId: 'node-checkout-svc',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/checkout-service',
+          level: 'ERROR',
+          message: 'envoy.circuit_breaker: connection pool overflow, pending requests 1284 exceeded max_pending_requests 100. Circuit open required.',
+        },
+        {
+          timestamp: tMinus(3),
+          nodeId: 'node-checkout-svc',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/checkout-service',
+          level: 'WARN',
+          message: 'retry_storm_detected: concurrent retry amplification factor = 8.4x upstream load. Scaling instances will worsen upstream thundering herd.',
+        },
+      ],
+      cloudTrailEvents60m: [
+        {
+          eventId: 'trail-evt-retry-storm-01',
+          eventTime: tMinus(22),
+          eventName: 'UpdateService',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/checkout-service',
+          userIdentity: 'arn:aws:iam::123456789012:user/release-pipeline',
+          requestParameters: {
+            serviceName: 'checkout-service',
+            clientRetryStrategy: 'AGGRESSIVE_FIXED_50MS',
+            circuitBreakerEnabled: false,
+          },
+        },
+      ],
+      canvasGraph: RETRY_STORM_GRAPH,
+    };
+  }
+
+  // 7. Database Row Deadlock & Lock Contention Storm
+  private static generateDatabaseDeadlockContention(incidentId: string, triggeredAt: string): AlertPayload {
+    const now = new Date(triggeredAt).getTime();
+    const tMinus = (mins: number) => new Date(now - mins * 60 * 1000).toISOString();
+
+    return {
+      incidentId,
+      triggeredAt,
+      activeAlarms: [
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:aurora-deadlock-contention-critical',
+          alarmName: 'Aurora-DeadlockContention-High',
+          nodeId: 'node-aurora-deadlock-db',
+          awsResourceId: 'arn:aws:rds:us-east-1:123456789012:db:aurora-pg-inventory-cluster',
+          metricName: 'Deadlocks',
+          metricValue: 342,
+          threshold: 1,
+          timestamp: tMinus(5),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:order-workers-transaction-timeout',
+          alarmName: 'Worker-TransactionTimeout-504',
+          nodeId: 'node-order-workers',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/orders-cluster/order-processor-fleet',
+          metricName: 'TaskTimeouts',
+          metricValue: 890,
+          threshold: 5,
+          timestamp: tMinus(3),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:order-apigw-504-gateway-timeout',
+          alarmName: 'OrderApi-504GatewayTimeout',
+          nodeId: 'node-orders-apigw',
+          awsResourceId: 'arn:aws:apigateway:us-east-1::/restapis/order-ingest-api/stages/prod',
+          metricName: '5XXError',
+          metricValue: 64.2,
+          threshold: 5.0,
+          timestamp: tMinus(1),
+        },
+      ],
+      cloudWatchLogs30m: [
+        {
+          timestamp: tMinus(15),
+          nodeId: 'node-aurora-deadlock-db',
+          awsResourceId: 'arn:aws:rds:us-east-1:123456789012:db:aurora-pg-inventory-cluster',
+          level: 'FATAL',
+          message: 'postgres: ERROR: deadlock detected. Process 21044 waits for ExclusiveLock on tuple (14, 2) of relation "inventory"; Process 21088 waits for ShareLock on transaction 98401.',
+        },
+        {
+          timestamp: tMinus(10),
+          nodeId: 'node-aurora-deadlock-db',
+          awsResourceId: 'arn:aws:rds:us-east-1:123456789012:db:aurora-pg-inventory-cluster',
+          level: 'ERROR',
+          message: 'pg_stat_activity: 488 of 500 sessions waiting in state "ClientRead" / "Lock:tuple" exceeding transaction timeout. CPU at 6% (pure row contention).',
+        },
+        {
+          timestamp: tMinus(4),
+          nodeId: 'node-order-workers',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/orders-cluster/order-processor-fleet',
+          level: 'WARN',
+          message: 'application_error: query timed out after 30000ms while acquiring row lock for SKU IPHONE-16-PRO. Scaling RDS instance will not resolve row locking.',
+        },
+      ],
+      cloudTrailEvents60m: [
+        {
+          eventId: 'trail-evt-deadlock-01',
+          eventTime: tMinus(35),
+          eventName: 'ModifyDBParameterGroup',
+          awsResourceId: 'arn:aws:rds:us-east-1:123456789012:db:aurora-pg-inventory-cluster',
+          userIdentity: 'arn:aws:iam::123456789012:user/db-admin',
+          requestParameters: {
+            DBParameterGroupName: 'pg15-inventory-params',
+            Parameters: [
+              { ParameterName: 'lock_timeout', ParameterValue: '0', ApplyMethod: 'immediate' },
+            ],
+          },
+        },
+      ],
+      canvasGraph: DATABASE_DEADLOCK_GRAPH,
+    };
+  }
+
+  // 8. VPC Route53 DNS Resolution Starvation (1024 UDP pkt/s ENI Cap)
+  private static generateVpcDnsStarvation(incidentId: string, triggeredAt: string): AlertPayload {
+    const now = new Date(triggeredAt).getTime();
+    const tMinus = (mins: number) => new Date(now - mins * 60 * 1000).toISOString();
+
+    return {
+      incidentId,
+      triggeredAt,
+      activeAlarms: [
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:vpc-dns-eni-packet-drop-critical',
+          alarmName: 'VPC-ENI-DNS-PacketDrop-Exhaustion',
+          nodeId: 'node-vpc-dns-resolver',
+          awsResourceId: 'arn:aws:route53resolver:us-east-1:123456789012:rni/rni-vpc-core-resolver',
+          metricName: 'LinkLocalPacketDrops',
+          metricValue: 4890,
+          threshold: 0,
+          timestamp: tMinus(6),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:mesh-microservice-dns-timeout',
+          alarmName: 'Microservices-DnsLookupTimeout-Spike',
+          nodeId: 'node-mesh-microservices',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/mesh-cluster/core-microservices',
+          metricName: 'DnsResolutionLatencyMs',
+          metricValue: 5200,
+          threshold: 100,
+          timestamp: tMinus(3),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:ingress-502-bad-gateway',
+          alarmName: 'Ingress-HTTP-502-BadGateway',
+          nodeId: 'node-k8s-ingress',
+          awsResourceId: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/k8s-core-ingress/8899aabb',
+          metricName: 'HTTP502Rate',
+          metricValue: 52.8,
+          threshold: 1.0,
+          timestamp: tMinus(1),
+        },
+      ],
+      cloudWatchLogs30m: [
+        {
+          timestamp: tMinus(14),
+          nodeId: 'node-mesh-microservices',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/mesh-cluster/core-microservices',
+          level: 'FATAL',
+          message: 'nodejs: Error: getaddrinfo EAI_AGAIN catalog.internal.prod:5432 after 5002ms timeout. DNS resolution failed across 18 worker tasks.',
+        },
+        {
+          timestamp: tMinus(9),
+          nodeId: 'node-vpc-dns-resolver',
+          awsResourceId: 'arn:aws:route53resolver:us-east-1:123456789012:rni/rni-vpc-core-resolver',
+          level: 'ERROR',
+          message: 'kernel: [eni-048c9a1b] link-local 169.254.169.253 / 10.0.0.2 UDP packet rate exceeded 1024 pkts/sec limit. 4,890 packets dropped.',
+        },
+        {
+          timestamp: tMinus(2),
+          nodeId: 'node-mesh-microservices',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/mesh-cluster/core-microservices',
+          level: 'WARN',
+          message: 'kube-dns: upstream nameserver 10.0.0.2:53 timeout; query retries exhausted. NodeLocal DNSCache DaemonSet required to eliminate ENI packet throttling.',
+        },
+      ],
+      cloudTrailEvents60m: [
+        {
+          eventId: 'trail-evt-dns-01',
+          eventTime: tMinus(28),
+          eventName: 'CreateService',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/mesh-cluster/core-microservices',
+          userIdentity: 'arn:aws:iam::123456789012:user/platform-deployer',
+          requestParameters: {
+            serviceName: 'core-microservices',
+            desiredCount: 60,
+            enableDnsCache: false,
+          },
+        },
+      ],
+      canvasGraph: VPC_DNS_STARVATION_GRAPH,
+    };
+  }
+
+  // 9. Poison Pill Queue Consumer CrashLoop
+  private static generateSqsPoisonPillCrashloop(incidentId: string, triggeredAt: string): AlertPayload {
+    const now = new Date(triggeredAt).getTime();
+    const tMinus = (mins: number) => new Date(now - mins * 60 * 1000).toISOString();
+
+    return {
+      incidentId,
+      triggeredAt,
+      activeAlarms: [
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:sqs-payment-events-toxic-retries',
+          alarmName: 'SQS-MessageAge-And-ToxicRetries',
+          nodeId: 'node-sqs-payment-events',
+          awsResourceId: 'arn:aws:sqs:us-east-1:123456789012:payment-events-queue',
+          metricName: 'ApproximateAgeOfOldestMessage',
+          metricValue: 18400,
+          threshold: 300,
+          timestamp: tMinus(8),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:ecs-ledger-workers-crashloop',
+          alarmName: 'ECS-Worker-CrashLoop-ExitCode1',
+          nodeId: 'node-ecs-queue-consumers',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/payments-cluster/ledger-worker-task',
+          metricName: 'TaskStopCount',
+          metricValue: 48,
+          threshold: 3,
+          timestamp: tMinus(3),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:producer-lambda-dlq-missing',
+          alarmName: 'Producer-Queue-Healthy-Throughput-Zero',
+          nodeId: 'node-event-producer',
+          awsResourceId: 'arn:aws:lambda:us-east-1:123456789012:function:PaymentEventProducer',
+          metricName: 'Errors',
+          metricValue: 0,
+          threshold: 10,
+          timestamp: tMinus(1),
+        },
+      ],
+      cloudWatchLogs30m: [
+        {
+          timestamp: tMinus(20),
+          nodeId: 'node-ecs-queue-consumers',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/payments-cluster/ledger-worker-task',
+          level: 'FATAL',
+          message: 'worker: Uncaught Exception: TypeError: Cannot read property amount_cents of undefined at processTransaction (processor.js:142). Task exited with code 1.',
+        },
+        {
+          timestamp: tMinus(12),
+          nodeId: 'node-sqs-payment-events',
+          awsResourceId: 'arn:aws:sqs:us-east-1:123456789012:payment-events-queue',
+          level: 'ERROR',
+          message: 'sqs_consumer: Message ID 4b8d7e2-toxic-payload received 46 times without acknowledgment. Visibility timeout expired, redelivering toxic message to next worker.',
+        },
+        {
+          timestamp: tMinus(4),
+          nodeId: 'node-ecs-queue-consumers',
+          awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/payments-cluster/ledger-worker-task',
+          level: 'WARN',
+          message: 'container: 12 of 12 worker tasks repeatedly killed by poison pill payload. Scaling ECS tasks crashes new containers immediately. Dead-letter queue required.',
+        },
+      ],
+      cloudTrailEvents60m: [
+        {
+          eventId: 'trail-evt-sqs-poison-01',
+          eventTime: tMinus(42),
+          eventName: 'SendMessage',
+          awsResourceId: 'arn:aws:sqs:us-east-1:123456789012:payment-events-queue',
+          userIdentity: 'arn:aws:iam::123456789012:user/legacy-integration-partner',
+          requestParameters: {
+            queueUrl: 'https://sqs.us-east-1.amazonaws.com/123456789012/payment-events-queue',
+            messageBody: '{"schemaVersion": "v0.1-corrupt", "payload": null}',
+          },
+        },
+      ],
+      canvasGraph: SQS_POISON_PILL_GRAPH,
+    };
+  }
+
+  // 10. VPC Subnet IP Address Exhaustion
+  private static generateSubnetIpExhaustion(incidentId: string, triggeredAt: string): AlertPayload {
+    const now = new Date(triggeredAt).getTime();
+    const tMinus = (mins: number) => new Date(now - mins * 60 * 1000).toISOString();
+
+    return {
+      incidentId,
+      triggeredAt,
+      activeAlarms: [
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:subnet-available-ips-zero',
+          alarmName: 'VPC-Subnet-AvailableIP-Zero',
+          nodeId: 'node-subnet-exhausted',
+          awsResourceId: 'subnet-0987654321fedcba0',
+          metricName: 'AvailableIpAddressCount',
+          metricValue: 0,
+          threshold: 10,
+          timestamp: tMinus(7),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:asg-launch-failure-insufficient-ips',
+          alarmName: 'ASG-EC2-LaunchFailure-Spike',
+          nodeId: 'node-asg-scale-fleet',
+          awsResourceId: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:asg-prod-app-fleet',
+          metricName: 'SuccessfulInstances',
+          metricValue: 0,
+          threshold: 10,
+          timestamp: tMinus(4),
+        },
+        {
+          alarmId: 'arn:aws:cloudwatch:us-east-1:123456789012:alarm:vpc-allocation-halt',
+          alarmName: 'VPC-Subnet-AllocationHalt',
+          nodeId: 'node-vpc-enterprise',
+          awsResourceId: 'vpc-0789abcdef0123456',
+          metricName: 'SubnetStatus',
+          metricValue: 1,
+          threshold: 0,
+          timestamp: tMinus(1),
+        },
+      ],
+      cloudWatchLogs30m: [
+        {
+          timestamp: tMinus(18),
+          nodeId: 'node-subnet-exhausted',
+          awsResourceId: 'subnet-0987654321fedcba0',
+          level: 'FATAL',
+          message: 'ec2.amazonaws.com: InsufficientFreeAddressesInSubnet - The subnet subnet-0987654321fedcba0 has 0 available IP addresses. All 251 addresses allocated.',
+        },
+        {
+          timestamp: tMinus(11),
+          nodeId: 'node-asg-scale-fleet',
+          awsResourceId: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:asg-prod-app-fleet',
+          level: 'ERROR',
+          message: 'autoscaling: Launching a new EC2 instance failed with Client.InsufficientFreeAddressesInSubnet. Desired capacity 40 cannot be fulfilled.',
+        },
+        {
+          timestamp: tMinus(3),
+          nodeId: 'node-asg-scale-fleet',
+          awsResourceId: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:asg-prod-app-fleet',
+          level: 'WARN',
+          message: 'aws-node-cni: failed to allocate ENI IP: no free private IP addresses available in subnet. Associate secondary VPC CIDR block (100.64.0.0/16) to remediate.',
+        },
+      ],
+      cloudTrailEvents60m: [
+        {
+          eventId: 'trail-evt-subnet-ip-01',
+          eventTime: tMinus(48),
+          eventName: 'CreateNetworkInterface',
+          awsResourceId: 'subnet-0987654321fedcba0',
+          userIdentity: 'arn:aws:iam::123456789012:user/ci-cd-runner',
+          requestParameters: {
+            subnetId: 'subnet-0987654321fedcba0',
+            description: 'Automated CI/CD ephemeral test runner ENI allocation',
+          },
+        },
+      ],
+      canvasGraph: SUBNET_IP_EXHAUSTION_GRAPH,
     };
   }
 }

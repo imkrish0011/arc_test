@@ -275,6 +275,12 @@ body.dark-theme {
 .sc-net { background: #f97316; color: #fff; }
 .sc-cost { background: #10b981; color: #fff; }
 .sc-live { background: #06b6d4; color: #fff; }
+.sc-storm { background: #e11d48; color: #fff; }
+.sc-deadlock { background: #d97706; color: #fff; }
+.sc-dns { background: #0284c7; color: #fff; }
+.sc-poison { background: #7c3aed; color: #fff; }
+.sc-cidr { background: #059669; color: #fff; }
+
 
 /* Incident Info Card */
 .incident-card {

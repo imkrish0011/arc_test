@@ -234,3 +234,234 @@ export const FINOPS_IDLE_WASTE_GRAPH: CanvasGraph = {
     { id: 'edge-vpc-to-ebs', source: 'node-vpc-legacy', target: 'node-ebs-01' },
   ],
 };
+
+export const RETRY_STORM_GRAPH: CanvasGraph = {
+  nodes: [
+    {
+      id: 'node-api-edge',
+      type: 'alb',
+      awsResourceId: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/api-edge-proxy/55aa66bb',
+      data: {
+        label: 'Edge Gateway / Ingress ALB',
+        category: 'network',
+        icon: 'network',
+        healthStatus: 'warning',
+      },
+    },
+    {
+      id: 'node-checkout-svc',
+      type: 'ecs',
+      awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/checkout-service',
+      data: {
+        label: 'Checkout Service (Fargate)',
+        category: 'compute',
+        icon: 'box',
+        desiredCount: 20,
+        runningCount: 20,
+        healthStatus: 'critical',
+      },
+    },
+    {
+      id: 'node-auth-redis',
+      type: 'elasticache',
+      awsResourceId: 'arn:aws:elasticache:us-east-1:123456789012:cluster:auth-token-redis',
+      data: {
+        label: 'Auth Token Redis Cache',
+        category: 'storage',
+        icon: 'database',
+        healthStatus: 'warning',
+      },
+    },
+    {
+      id: 'node-payment-vault',
+      type: 'ecs',
+      awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/ecommerce-cluster/payment-token-vault',
+      data: {
+        label: 'Payment Token Vault API',
+        category: 'compute',
+        icon: 'box',
+        healthStatus: 'critical',
+      },
+    },
+  ],
+  edges: [
+    { id: 'edge-edge-to-checkout', source: 'node-api-edge', target: 'node-checkout-svc' },
+    { id: 'edge-checkout-to-redis', source: 'node-checkout-svc', target: 'node-auth-redis' },
+    { id: 'edge-checkout-to-payment', source: 'node-checkout-svc', target: 'node-payment-vault' },
+  ],
+};
+
+export const DATABASE_DEADLOCK_GRAPH: CanvasGraph = {
+  nodes: [
+    {
+      id: 'node-orders-apigw',
+      type: 'apiGateway',
+      awsResourceId: 'arn:aws:apigateway:us-east-1::/restapis/order-ingest-api/stages/prod',
+      data: {
+        label: 'Orders Ingest API Gateway',
+        category: 'network',
+        icon: 'network',
+        healthStatus: 'warning',
+      },
+    },
+    {
+      id: 'node-order-workers',
+      type: 'ecs',
+      awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/orders-cluster/order-processor-fleet',
+      data: {
+        label: 'Parallel Order Workers Fleet',
+        category: 'compute',
+        icon: 'box',
+        desiredCount: 30,
+        runningCount: 30,
+        healthStatus: 'critical',
+      },
+    },
+    {
+      id: 'node-aurora-deadlock-db',
+      type: 'rds',
+      awsResourceId: 'arn:aws:rds:us-east-1:123456789012:db:aurora-pg-inventory-cluster',
+      data: {
+        label: 'Aurora Postgres Inventory DB',
+        category: 'storage',
+        icon: 'database',
+        engine: 'aurora-postgresql',
+        healthStatus: 'critical',
+      },
+    },
+  ],
+  edges: [
+    { id: 'edge-apigw-to-workers', source: 'node-orders-apigw', target: 'node-order-workers' },
+    { id: 'edge-workers-to-db', source: 'node-order-workers', target: 'node-aurora-deadlock-db' },
+  ],
+};
+
+export const VPC_DNS_STARVATION_GRAPH: CanvasGraph = {
+  nodes: [
+    {
+      id: 'node-k8s-ingress',
+      type: 'alb',
+      awsResourceId: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/k8s-core-ingress/8899aabb',
+      data: {
+        label: 'K8s Cluster Ingress ALB',
+        category: 'network',
+        icon: 'network',
+        healthStatus: 'warning',
+      },
+    },
+    {
+      id: 'node-mesh-microservices',
+      type: 'ecs',
+      awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/mesh-cluster/core-microservices',
+      data: {
+        label: 'High-Density Mesh Microservices',
+        category: 'compute',
+        icon: 'box',
+        healthStatus: 'critical',
+      },
+    },
+    {
+      id: 'node-vpc-dns-resolver',
+      type: 'vpc',
+      awsResourceId: 'arn:aws:route53resolver:us-east-1:123456789012:rni/rni-vpc-core-resolver',
+      data: {
+        label: 'AWS VPC AmazonProvidedDNS (.2)',
+        category: 'boundary',
+        icon: 'globe',
+        healthStatus: 'critical',
+      },
+    },
+  ],
+  edges: [
+    { id: 'edge-ingress-to-mesh', source: 'node-k8s-ingress', target: 'node-mesh-microservices' },
+    { id: 'edge-mesh-to-dns', source: 'node-mesh-microservices', target: 'node-vpc-dns-resolver' },
+  ],
+};
+
+export const SQS_POISON_PILL_GRAPH: CanvasGraph = {
+  nodes: [
+    {
+      id: 'node-event-producer',
+      type: 'lambda',
+      awsResourceId: 'arn:aws:lambda:us-east-1:123456789012:function:PaymentEventProducer',
+      data: {
+        label: 'Payment Event Producer',
+        category: 'compute',
+        icon: 'cpu',
+        healthStatus: 'healthy',
+      },
+    },
+    {
+      id: 'node-sqs-payment-events',
+      type: 'sqs',
+      awsResourceId: 'arn:aws:sqs:us-east-1:123456789012:payment-events-queue',
+      data: {
+        label: 'SQS Payment Events Queue',
+        category: 'storage',
+        icon: 'database',
+        healthStatus: 'critical',
+      },
+    },
+    {
+      id: 'node-ecs-queue-consumers',
+      type: 'ecs',
+      awsResourceId: 'arn:aws:ecs:us-east-1:123456789012:service/payments-cluster/ledger-worker-task',
+      data: {
+        label: 'ECS Ledger Queue Workers',
+        category: 'compute',
+        icon: 'box',
+        desiredCount: 12,
+        runningCount: 0,
+        healthStatus: 'critical',
+      },
+    },
+  ],
+  edges: [
+    { id: 'edge-producer-to-sqs', source: 'node-event-producer', target: 'node-sqs-payment-events' },
+    { id: 'edge-sqs-to-consumers', source: 'node-sqs-payment-events', target: 'node-ecs-queue-consumers' },
+  ],
+};
+
+export const SUBNET_IP_EXHAUSTION_GRAPH: CanvasGraph = {
+  nodes: [
+    {
+      id: 'node-vpc-enterprise',
+      type: 'vpc',
+      awsResourceId: 'vpc-0789abcdef0123456',
+      data: {
+        label: 'Production Enterprise VPC (10.0.0.0/16)',
+        category: 'boundary',
+        icon: 'box',
+        healthStatus: 'warning',
+      },
+    },
+    {
+      id: 'node-subnet-exhausted',
+      type: 'subnet',
+      awsResourceId: 'subnet-0987654321fedcba0',
+      data: {
+        label: 'Private App Subnet 1A (10.0.1.0/24)',
+        category: 'boundary',
+        icon: 'box',
+        healthStatus: 'critical',
+      },
+    },
+    {
+      id: 'node-asg-scale-fleet',
+      type: 'asg',
+      awsResourceId: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:asg-prod-app-fleet',
+      data: {
+        label: 'Production ASG Fleet (Launch Suspended)',
+        category: 'compute',
+        icon: 'cpu',
+        desiredCapacity: 40,
+        runningCount: 16,
+        healthStatus: 'critical',
+      },
+    },
+  ],
+  edges: [
+    { id: 'edge-vpc-to-subnet', source: 'node-vpc-enterprise', target: 'node-subnet-exhausted' },
+    { id: 'edge-subnet-to-asg', source: 'node-subnet-exhausted', target: 'node-asg-scale-fleet' },
+  ],
+};

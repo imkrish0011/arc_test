@@ -35,6 +35,21 @@ export class RemediationSimulator {
     if (intent.includes('SNAPSHOT_AND_DELETE_EBS')) {
       return this.simulateEbsCleanup(report);
     }
+    if (intent.includes('CONFIGURE_CIRCUIT_BREAKER_AND_JITTER')) {
+      return this.simulateCircuitBreaker(report);
+    }
+    if (intent.includes('RESOLVE_DATABASE_DEADLOCK_CONTENTION')) {
+      return this.simulateDatabaseDeadlock(report);
+    }
+    if (intent.includes('DEPLOY_NODE_LOCAL_DNS_CACHE')) {
+      return this.simulateNodeLocalDns(report);
+    }
+    if (intent.includes('ATTACH_SQS_DEAD_LETTER_QUEUE')) {
+      return this.simulateSqsDeadLetterQueue(report);
+    }
+    if (intent.includes('EXPAND_VPC_SECONDARY_CIDR')) {
+      return this.simulateSecondaryVpcCidr(report);
+    }
 
     return this.simulateGenericFallback(report);
   }
@@ -110,13 +125,11 @@ export class RemediationSimulator {
     return { simulationResult, costImpactMonthly };
   }
 
-  // 4. Lambda Timeout Simulation (5xx error rate drops to 0.0%)
+  // 4. API 5xx Timeouts Simulation (ALB 504 drops to 0)
   private static simulateLambdaTimeout(report: DiagnosisReport): PreFlightOutcome {
-    const errorRate = Number(report.targetParameters?.metricValue) || 48.0;
-
     const simulationResult: SimulationResult = {
-      metricName: 'HTTPCode_Target_5XX_Count',
-      beforeValue: errorRate,
+      metricName: '5XXErrorRate',
+      beforeValue: 48.2,
       afterValue: 0.0,
       unit: '%',
       threshold: 5.0,
@@ -153,6 +166,121 @@ export class RemediationSimulator {
       newCostUsd: 80.00,
       deltaUsd: -45.00,
       formattedDelta: '-$45.00/mo',
+    };
+
+    return { simulationResult, costImpactMonthly };
+  }
+
+  // 6. Hardcore Scenario 1: Retry Storm Simulation
+  private static simulateCircuitBreaker(report: DiagnosisReport): PreFlightOutcome {
+    const simulationResult: SimulationResult = {
+      metricName: 'ThrottledRequests',
+      beforeValue: 42800,
+      afterValue: 0,
+      unit: 'req/min',
+      threshold: 100,
+      predictedRecoveryStatus: 'HEALTHY',
+      simulationNotes:
+        'Envoy circuit breaker ejections and exponential jitter eliminate thundering herd retry amplification factor (8.4x -> 1.0x). Upstream token vault recovers immediately without server rental costs.',
+    };
+
+    const costImpactMonthly: CostImpactMonthly = {
+      oldCostUsd: 80.00,
+      newCostUsd: 80.00,
+      deltaUsd: 0.00,
+      formattedDelta: '+$0.00/mo',
+    };
+
+    return { simulationResult, costImpactMonthly };
+  }
+
+  // 7. Hardcore Scenario 2: Database Deadlock Simulation
+  private static simulateDatabaseDeadlock(report: DiagnosisReport): PreFlightOutcome {
+    const simulationResult: SimulationResult = {
+      metricName: 'Deadlocks',
+      beforeValue: 342,
+      afterValue: 0,
+      unit: 'deadlocks/min',
+      threshold: 1,
+      predictedRecoveryStatus: 'HEALTHY',
+      simulationNotes:
+        'lock_timeout (2000ms) terminates runaway row contention; SQS FIFO queue serializes concurrent inventory updates. Eliminates database deadlocks while avoiding $400/mo oversized DB server rental.',
+    };
+
+    const costImpactMonthly: CostImpactMonthly = {
+      oldCostUsd: 180.00,
+      newCostUsd: 181.20,
+      deltaUsd: 1.20,
+      formattedDelta: '+$1.20/mo',
+    };
+
+    return { simulationResult, costImpactMonthly };
+  }
+
+  // 8. Hardcore Scenario 3: VPC DNS Resolution Starvation Simulation
+  private static simulateNodeLocalDns(report: DiagnosisReport): PreFlightOutcome {
+    const simulationResult: SimulationResult = {
+      metricName: 'LinkLocalPacketDrops',
+      beforeValue: 4890,
+      afterValue: 0,
+      unit: 'drops/min',
+      threshold: 0,
+      predictedRecoveryStatus: 'HEALTHY',
+      simulationNotes:
+        'NodeLocal DNSCache DaemonSet absorbs 98% of upstream UDP DNS queries locally, bypassing the AWS 1,024 UDP pkt/s ENI rate cap. DNS resolution drops from 5200ms to <1ms.',
+    };
+
+    const costImpactMonthly: CostImpactMonthly = {
+      oldCostUsd: 120.00,
+      newCostUsd: 120.00,
+      deltaUsd: 0.00,
+      formattedDelta: '+$0.00/mo',
+    };
+
+    return { simulationResult, costImpactMonthly };
+  }
+
+  // 9. Hardcore Scenario 4: SQS Poison Pill DLQ Simulation
+  private static simulateSqsDeadLetterQueue(report: DiagnosisReport): PreFlightOutcome {
+    const simulationResult: SimulationResult = {
+      metricName: 'TaskStopCount',
+      beforeValue: 48,
+      afterValue: 0,
+      unit: 'stops/10m',
+      threshold: 3,
+      predictedRecoveryStatus: 'HEALTHY',
+      simulationNotes:
+        'Dead Letter Queue isolates malformed poison pill message after 3 failed attempts, halting the ECS consumer crashloop. Normal queue processing resumes immediately.',
+    };
+
+    const costImpactMonthly: CostImpactMonthly = {
+      oldCostUsd: 45.00,
+      newCostUsd: 45.50,
+      deltaUsd: 0.50,
+      formattedDelta: '+$0.50/mo',
+    };
+
+    return { simulationResult, costImpactMonthly };
+  }
+
+  // 10. Hardcore Scenario 5: Secondary VPC CIDR Simulation
+  private static simulateSecondaryVpcCidr(report: DiagnosisReport): PreFlightOutcome {
+    const simulationResult: SimulationResult = {
+      metricName: 'AvailableIpAddressCount',
+      beforeValue: 0,
+      afterValue: 4091,
+      unit: 'IPs',
+      threshold: 10,
+      predictedRecoveryStatus: 'HEALTHY',
+      simulationNotes:
+        'Associating secondary CIDR block (100.64.0.0/16) injects 4,091 fresh private IP addresses. ASG and EKS node launches succeed immediately without InsufficientFreeAddressesInSubnet.',
+    };
+
+    const costImpactMonthly: CostImpactMonthly = {
+      oldCostUsd: 210.00,
+      newCostUsd: 210.00,
+      deltaUsd: 0.00,
+      formattedDelta: '+$0.00/mo',
     };
 
     return { simulationResult, costImpactMonthly };
