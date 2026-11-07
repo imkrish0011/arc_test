@@ -160,6 +160,37 @@ async function runAllTests() {
   assert(webhookData.handoffResult !== undefined, '24/7 Auto-handoff to Gargi executed automatically');
 
   console.log('\n=============================================');
+  console.log("8. TESTING SWETA'S REMEDIATION & SAFETY ENGINE");
+  console.log('=============================================');
+  const remRes = await fetch(baseUrl + '/api/remediation/synthesize', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ incidentId: lastIncidentId })
+  });
+  assert(remRes.status === 200, 'POST /api/remediation/synthesize returned 200 OK');
+  const remData = await remRes.json();
+  assert(remData.success === true, 'Remediation synthesis success is true');
+  assert(remData.verifiedFixPackage.guardrailStatus === 'PASSED_VERIFIED', 'Guardrail status is PASSED_VERIFIED');
+  assert(remData.verifiedFixPackage.terraformDiff.length > 0, 'Terraform HCL diff generated');
+  assert(remData.verifiedFixPackage.awsSdkAction.command.length > 0, 'AWS SDK command generated');
+  assert(remData.verifiedFixPackage.simulationResult.predictedRecoveryStatus === 'HEALTHY', 'Simulation recovery is HEALTHY');
+  assert(remData.verifiedFixPackage.costImpactMonthly.formattedDelta.length > 0, 'Cost impact delta calculated');
+
+  // Test Gate 2 Destructive Command Firewall
+  const blockRes = await fetch(baseUrl + '/api/remediation/inspect-patch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patch: {
+        terraformDiff: 'resource "aws_db_instance" "primary" {}',
+        awsSdkAction: { service: 'rds', command: 'DeleteDBInstance', parameters: {} }
+      }
+    })
+  });
+  const blockData = await blockRes.json();
+  assert(blockData.inspection.guardrailStatus === 'BLOCKED_DESTRUCTIVE_OP', 'Gate 2 blocked destructive DeleteDBInstance operation');
+
+  console.log('\n=============================================');
   console.log('FINAL SUMMARY');
   console.log('=============================================');
   console.log('Total Tests Passed: ' + passed);
