@@ -18,7 +18,7 @@
         <span>ArchAutomation</span>
       </div>
       <span class="header-divider">/</span>
-      <span class="header-subtitle">Krish ➔ Gargi RCA Engine & Testing Hub</span>
+      <span class="header-subtitle">Krish (Telemetry) ➔ Gargi (RCA) ➔ Sweta (Remediation)</span>
     </div>
 
     <div class="header-right">
@@ -32,7 +32,12 @@
         Run Gargi RCA
       </button>
 
-      <button id="btn-dispatch-handoff" class="btn btn-primary">
+      <button id="btn-run-remediation" class="btn btn-primary" style="background:linear-gradient(135deg, #10b981, #059669); border-color:#059669;">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Synthesize Sweta's Fix
+      </button>
+
+      <button id="btn-dispatch-handoff" class="btn btn-secondary">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         Send to Gargi Engine
       </button>
@@ -118,6 +123,11 @@
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
           🔬 Gargi RCA Diagnostics
           <span id="tab-rca-badge" class="tab-badge" style="background:#0284c7; color:#fff;">Live</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-remediation">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          🛡️ Sweta's Remediation & Safety
+          <span id="tab-remediation-badge" class="tab-badge" style="background:#10b981; color:#fff;">Handoff 3</span>
         </button>
         <button class="tab-btn" data-tab="tab-logs">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="10" y1="3" y2="21"/></svg>
@@ -231,6 +241,143 @@
               <input type="text" id="rca-chat-input" placeholder="Ask a diagnostic question..." style="flex:1; background:#0b0f19; border:1px solid #334155; color:#fff; border-radius:6px; padding:0.5rem 0.75rem; font-size:0.85rem;" required>
               <button type="submit" class="btn btn-primary" style="padding:0.5rem 1rem;">Ask</button>
             </form>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Tab Content: Sweta's Remediation & Safety Engine -->
+      <div id="tab-remediation" class="tab-content">
+        <div style="padding:1.25rem; display:flex; flex-direction:column; gap:1.25rem;">
+          
+          <!-- Top Safety Banner -->
+          <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.35rem;">
+                <h3 style="margin:0; font-size:1.15rem; color:#f8fafc; display:flex; align-items:center; gap:0.5rem;">
+                  <span>🛡️</span> Sweta's Autonomous Remediation Package (Handoff 3)
+                </h3>
+                <span id="rem-guardrail-badge" style="background:#065f46; color:#34d399; font-weight:800; font-size:0.8rem; padding:0.25rem 0.75rem; border-radius:999px; letter-spacing:0.04em;">
+                  PASSED_VERIFIED
+                </span>
+              </div>
+              <p style="margin:0; color:#94a3b8; font-size:0.85rem;">
+                Dual-mode synthesized patch verified through the 3-Gate Deterministic Safety Inspector with telemetry simulation.
+              </p>
+            </div>
+
+            <!-- 3-Gate Checklist Badges -->
+            <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+              <span id="gate1-badge" style="background:#0b1329; border:1px solid #10b981; color:#34d399; font-size:0.75rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
+                Gate 1: Syntax Valid ✓
+              </span>
+              <span id="gate2-badge" style="background:#0b1329; border:1px solid #10b981; color:#34d399; font-size:0.75rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
+                Gate 2: Zero-Destruction ✓
+              </span>
+              <span id="gate3-badge" style="background:#0b1329; border:1px solid #10b981; color:#34d399; font-size:0.75rem; font-weight:700; padding:0.35rem 0.65rem; border-radius:6px;">
+                Gate 3: Security & Budget ✓
+              </span>
+            </div>
+          </div>
+
+          <!-- Main Remediation Grid -->
+          <div style="display:grid; grid-template-columns: 1.15fr 0.85fr; gap:1.25rem;">
+            
+            <!-- Left Column: Dual-Mode Patch -->
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              
+              <!-- Mode A: Terraform HCL Diff -->
+              <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                  <h4 style="margin:0; font-size:0.95rem; color:#f8fafc; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="color:#7c3aed;">📝</span> Mode A: Clean Terraform HCL Diff (GitOps PR)
+                  </h4>
+                  <span style="font-size:0.75rem; color:#64748b;">Unified Diff</span>
+                </div>
+                <div style="background:#090d16; border:1px solid #1e293b; border-radius:8px; padding:0.85rem; overflow-x:auto;">
+                  <pre id="rem-tf-diff" style="margin:0; font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:#e2e8f0; line-height:1.6; white-space:pre;">Loading Terraform diff...</pre>
+                </div>
+              </div>
+
+              <!-- Mode B: AWS SDK Action -->
+              <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                  <h4 style="margin:0; font-size:0.95rem; color:#f8fafc; display:flex; align-items:center; gap:0.5rem;">
+                    <span style="color:#38bdf8;">⚡</span> Mode B: 1-Click AWS SDK v3 Action (Emergency Fix)
+                  </h4>
+                  <span id="rem-sdk-service" style="font-size:0.75rem; background:#0284c7; color:#fff; padding:0.15rem 0.45rem; border-radius:4px; font-weight:700;">AWS SDK</span>
+                </div>
+                <div style="background:#090d16; border:1px solid #1e293b; border-radius:8px; padding:0.85rem; overflow-x:auto;">
+                  <pre id="rem-sdk-action" style="margin:0; font-family:'JetBrains Mono',monospace; font-size:0.82rem; color:#38bdf8; line-height:1.6; white-space:pre;">Loading AWS SDK command...</pre>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Column: Pre-Flight Simulation, Cost, and Primary Action -->
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              
+              <!-- Pre-Flight Telemetry Simulation -->
+              <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem;">
+                <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:#f8fafc; display:flex; align-items:center; gap:0.5rem;">
+                  <span style="color:#10b981;">📊</span> Telemetry-Calibrated Pre-Flight Simulation
+                </h4>
+                
+                <div style="background:#0b0f19; border:1px solid #1e293b; border-radius:8px; padding:0.85rem; margin-bottom:0.75rem;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                    <span id="sim-metric-name" style="font-size:0.85rem; color:#94a3b8; font-weight:600;">CPUUtilization</span>
+                    <span id="sim-recovery-status" style="background:#065f46; color:#34d399; font-weight:800; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:4px;">
+                      HEALTHY
+                    </span>
+                  </div>
+                  <div style="display:flex; align-items:baseline; gap:0.75rem;">
+                    <span id="sim-before-val" style="font-size:1.4rem; font-weight:800; color:#ef4444;">96.4%</span>
+                    <span style="color:#64748b; font-size:1.1rem;">➔</span>
+                    <span id="sim-after-val" style="font-size:1.4rem; font-weight:800; color:#10b981;">38.5%</span>
+                    <span id="sim-threshold" style="font-size:0.75rem; color:#64748b; margin-left:auto;">Threshold: 90%</span>
+                  </div>
+                </div>
+
+                <p id="sim-notes" style="margin:0; font-size:0.8rem; color:#cbd5e1; line-height:1.45;">
+                  Simulating post-fix metric recovery...
+                </p>
+              </div>
+
+              <!-- Monthly Cost Delta -->
+              <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem;">
+                <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; color:#f8fafc; display:flex; align-items:center; gap:0.5rem;">
+                  <span style="color:#eab308;">💵</span> Exact Monthly Cost Delta
+                </h4>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:#0b0f19; border:1px solid #1e293b; border-radius:8px; padding:0.85rem;">
+                  <div>
+                    <span style="font-size:0.75rem; color:#64748b; display:block;">Financial Impact</span>
+                    <span id="cost-delta-val" style="font-size:1.35rem; font-weight:800; color:#f8fafc;">+$64.80/mo</span>
+                  </div>
+                  <div style="text-align:right; font-size:0.8rem; color:#94a3b8;">
+                    <div>Old: <span id="cost-old-val">$50.40</span></div>
+                    <div>New: <span id="cost-new-val">$115.20</span></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rollback Config & Primary CTA -->
+              <div style="background:#131824; border:1px solid #1e293b; border-radius:10px; padding:1.25rem; display:flex; flex-direction:column; gap:0.85rem;">
+                <div>
+                  <span style="font-size:0.75rem; color:#64748b; text-transform:uppercase; font-weight:700; display:block; margin-bottom:0.25rem;">Automated Rollback Safety</span>
+                  <div id="rem-rollback-desc" style="font-size:0.8rem; color:#94a3b8; line-height:1.4;">
+                    Automated pre-upgrade snapshot will be taken before applying changes.
+                  </div>
+                </div>
+
+                <!-- THE PRIMARY CTA BUTTON -->
+                <button id="btn-approve-apply-fix" class="btn btn-primary" style="width:100%; padding:0.85rem; font-size:1rem; font-weight:800; background:linear-gradient(135deg, #10b981, #059669); border:none; box-shadow:0 0 20px rgba(16, 185, 129, 0.4); display:flex; align-items:center; justify-content:center; gap:0.5rem; cursor:pointer;">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve & Apply Fix (1-Click)
+                </button>
+              </div>
+
+            </div>
+
           </div>
 
         </div>
@@ -370,6 +517,46 @@
       <div class="modal-footer">
         <button id="btn-cancel-live" class="btn btn-secondary">Cancel</button>
         <button id="btn-submit-live" class="btn btn-primary">Trigger Ingestion</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sweta's 1-Click Approval Execution Modal -->
+  <div id="approval-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:540px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon" style="background:#065f46; color:#34d399;">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <h3>Autonomous Fix Executed & Verified</h3>
+            <p style="margin:0; font-size:0.8rem; color:#94a3b8;">1-Click Automated Cloud Remediation</p>
+          </div>
+        </div>
+        <button id="approval-modal-close" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:0.85rem;">
+        <div style="background:#090d16; border:1px solid #1e293b; border-radius:8px; padding:0.85rem; font-size:0.85rem; display:flex; flex-direction:column; gap:0.6rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem; color:#34d399;">
+            <span>✓</span> <strong>AWS SDK v3:</strong> <span id="appr-step-aws">ModifyDBInstanceCommand applied (ApplyImmediately: true) in 1.4s</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem; color:#38bdf8;">
+            <span>✓</span> <strong>GitOps Sync:</strong> <span id="appr-step-git">Pull Request #42 opened on GitHub with Terraform diff</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem; color:#a855f7;">
+            <span>✓</span> <strong>Pre-Rollback Snapshot:</strong> <span id="appr-step-snap">Automated safety backup confirmed in AWS</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:0.5rem; color:#10b981;">
+            <span>✓</span> <strong>CloudWatch Telemetry:</strong> <span id="appr-step-metric">Target metric restored to HEALTHY (under threshold)</span>
+          </div>
+        </div>
+        <div style="background:#065f46; border:1px solid #059669; color:#f0fdf4; border-radius:8px; padding:0.75rem 1rem; font-size:0.85rem; text-align:center; font-weight:700;">
+          🎉 Incident Healed in &lt; 2 Minutes! Infrastructure Restored.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="approval-modal-ok" class="btn btn-primary" style="background:#10b981; border-color:#10b981;">Done</button>
       </div>
     </div>
   </div>

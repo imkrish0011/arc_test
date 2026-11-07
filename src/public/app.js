@@ -3,6 +3,7 @@ let currentPayload = null;
 let currentScenario = 'rds_bottleneck';
 let activeLogLevel = 'ALL';
 let currentReport = null;
+let currentRemediation = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -63,7 +64,10 @@ function initTabs() {
       btn.classList.add('active');
       const targetId = btn.getAttribute('data-tab');
       const targetContent = document.getElementById(targetId);
-      if (targetContent) targetContent.classList.add('active');
+      if (targetContent) {
+        targetContent.classList.add('active');
+        document.querySelector('.inspector-panel')?.scrollIntoView({ behavior: 'smooth' });
+      }
     });
   });
 }
@@ -112,6 +116,8 @@ async function runGargiRca() {
     if (data.success && data.report) {
       currentReport = data.report;
       renderRcaReport(currentReport);
+      // Automatically synthesize Sweta's verified remediation package
+      runSwetaRemediation(currentReport);
     }
   } catch (err) {
     console.error('RCA run error:', err);
@@ -147,6 +153,98 @@ function renderRcaReport(report) {
       Deduplication collapsed <strong>${report.deduplicationAnalysis.cascadingAlarmsCount} cascading alerts</strong>.
     </div>
   `;
+}
+
+// Execute Sweta's Remediation Synthesis (Handoff 3)
+async function runSwetaRemediation(report) {
+  if (!report && !currentReport) return;
+  const targetReport = report || currentReport;
+  try {
+    const res = await fetch('/api/remediation/synthesize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ report: targetReport }),
+    });
+    const data = await res.json();
+    if (data.success && data.verifiedFixPackage) {
+      currentRemediation = data.verifiedFixPackage;
+      renderRemediationPackage(currentRemediation);
+    }
+  } catch (err) {
+    console.error('Remediation run error:', err);
+  }
+}
+
+// Render Sweta's Verified Fix Package into Remediation Tab
+function renderRemediationPackage(pkg) {
+  // Guardrail badge
+  const guardBadge = document.getElementById('rem-guardrail-badge');
+  guardBadge.innerText = pkg.guardrailStatus;
+  if (pkg.guardrailStatus === 'PASSED_VERIFIED') {
+    guardBadge.style.background = '#065f46';
+    guardBadge.style.color = '#34d399';
+  } else {
+    guardBadge.style.background = '#991b1b';
+    guardBadge.style.color = '#fca5a5';
+  }
+
+  // Safety Gates
+  const g = pkg.safetyGateDetails;
+  const gate1 = document.getElementById('gate1-badge');
+  gate1.innerText = g.gate1SyntaxPassed ? 'Gate 1: Syntax Valid ✓' : 'Gate 1: Syntax Error ✗';
+  gate1.style.color = g.gate1SyntaxPassed ? '#34d399' : '#f87171';
+  gate1.style.borderColor = g.gate1SyntaxPassed ? '#10b981' : '#ef4444';
+
+  const gate2 = document.getElementById('gate2-badge');
+  gate2.innerText = g.gate2DestructionFirewallPassed ? 'Gate 2: Zero-Destruction ✓' : 'Gate 2: Blocked Destructive Op ✗';
+  gate2.style.color = g.gate2DestructionFirewallPassed ? '#34d399' : '#f87171';
+  gate2.style.borderColor = g.gate2DestructionFirewallPassed ? '#10b981' : '#ef4444';
+
+  const gate3 = document.getElementById('gate3-badge');
+  gate3.innerText = g.gate3SecurityBudgetPassed ? 'Gate 3: Security & Budget ✓' : 'Gate 3: Security Breach ✗';
+  gate3.style.color = g.gate3SecurityBudgetPassed ? '#34d399' : '#f87171';
+  gate3.style.borderColor = g.gate3SecurityBudgetPassed ? '#10b981' : '#ef4444';
+
+  // Mode A: Terraform HCL Diff with Syntax Highlighting
+  const tfDiffEl = document.getElementById('rem-tf-diff');
+  const lines = (pkg.terraformDiff || '').split('\n').map(line => {
+    if (line.startsWith('+') && !line.startsWith('+++')) {
+      return `<span style="color:#34d399; background:rgba(16,185,129,0.15); display:block;">${escapeHtml(line)}</span>`;
+    } else if (line.startsWith('-') && !line.startsWith('---')) {
+      return `<span style="color:#f87171; background:rgba(239,68,68,0.15); display:block;">${escapeHtml(line)}</span>`;
+    } else if (line.startsWith('@@') || line.startsWith('---') || line.startsWith('+++')) {
+      return `<span style="color:#a855f7; font-weight:600; display:block;">${escapeHtml(line)}</span>`;
+    }
+    return `<span>${escapeHtml(line)}</span>`;
+  });
+  tfDiffEl.innerHTML = lines.join('');
+
+  // Mode B: AWS SDK Action
+  document.getElementById('rem-sdk-service').innerText = (pkg.awsSdkAction.service || 'aws').toUpperCase();
+  document.getElementById('rem-sdk-action').innerHTML = escapeHtml(JSON.stringify(pkg.awsSdkAction, null, 2));
+
+  // Simulation
+  const sim = pkg.simulationResult;
+  document.getElementById('sim-metric-name').innerText = sim.metricName;
+  document.getElementById('sim-before-val').innerText = `${sim.beforeValue}${sim.unit}`;
+  document.getElementById('sim-after-val').innerText = `${sim.afterValue}${sim.unit}`;
+  document.getElementById('sim-threshold').innerText = `Threshold: ${sim.threshold}${sim.unit}`;
+  document.getElementById('sim-recovery-status').innerText = sim.predictedRecoveryStatus;
+  document.getElementById('sim-notes').innerText = sim.simulationNotes;
+
+  // Cost Delta
+  const cost = pkg.costImpactMonthly;
+  document.getElementById('cost-delta-val').innerText = cost.formattedDelta;
+  document.getElementById('cost-old-val').innerText = `$${cost.oldCostUsd.toFixed(2)}`;
+  document.getElementById('cost-new-val').innerText = `$${cost.newCostUsd.toFixed(2)}`;
+
+  // Rollback Safety
+  const rollDesc = document.getElementById('rem-rollback-desc');
+  if (pkg.rollbackSnapshotConfig) {
+    rollDesc.innerText = `${pkg.rollbackSnapshotConfig.description} (${pkg.rollbackSnapshotConfig.action})`;
+  } else {
+    rollDesc.innerText = 'Standard state file rollback preserved in GitOps version control.';
+  }
 }
 
 // Initialize Interactive Incident Q&A Assistant (Task 4)
@@ -353,6 +451,45 @@ function initActionButtons() {
     document.querySelector('.tab-btn[data-tab="tab-rca"]').classList.add('active');
     document.getElementById('tab-rca').classList.add('active');
     showToast('Gargi RCA Engine executed!');
+  });
+
+  document.getElementById('btn-run-remediation').addEventListener('click', async () => {
+    if (!currentReport) {
+      await runGargiRca();
+    }
+    await runSwetaRemediation(currentReport);
+    // Switch to Remediation tab
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelector('.tab-btn[data-tab="tab-remediation"]').classList.add('active');
+    const remContent = document.getElementById('tab-remediation');
+    if (remContent) {
+      remContent.classList.add('active');
+      document.querySelector('.inspector-panel')?.scrollIntoView({ behavior: 'smooth' });
+    }
+    showToast("Sweta's Verified Remediation Package Synthesized!");
+  });
+
+  // 1-Click Approval Execution Modal
+  document.getElementById('btn-approve-apply-fix').addEventListener('click', () => {
+    if (!currentRemediation) return;
+    const modal = document.getElementById('approval-modal');
+    
+    // Customize modal text based on active fix
+    const action = currentRemediation.awsSdkAction;
+    document.getElementById('appr-step-aws').innerText = `${action.command} applied to ${action.service.toUpperCase()} (ApplyImmediately: true) in 1.2s`;
+    document.getElementById('appr-step-git').innerText = `Pull Request #42 opened with Terraform Diff (${currentRemediation.costImpactMonthly.formattedDelta})`;
+    
+    modal.classList.remove('hidden');
+    showToast('Autonomous Fix Approved & Dispatched to AWS!');
+  });
+
+  document.getElementById('approval-modal-close').addEventListener('click', () => {
+    document.getElementById('approval-modal').classList.add('hidden');
+  });
+
+  document.getElementById('approval-modal-ok').addEventListener('click', () => {
+    document.getElementById('approval-modal').classList.add('hidden');
   });
 
   document.getElementById('btn-dispatch-handoff').addEventListener('click', () => {

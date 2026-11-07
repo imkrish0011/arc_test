@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "simulate": "tsx scripts/simulate-alarm.ts",
+    "remediate": "tsx scripts/simulate-alarm.ts --remediate",
     "inspect": "tsx scripts/inspect-payload.ts"
   },
   "keywords": [
@@ -42,6 +43,6 @@
     "@types/node": "^22.13.5",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "vitest": "^3.0.7"
+    "vitest": "^5.1.0"
   }
 }

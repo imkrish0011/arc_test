@@ -9,6 +9,7 @@ import { handoffRouter } from './api/handoffRoutes.js';
 import { scenarioRouter } from './api/scenarioRoutes.js';
 import { liveAwsRouter } from './api/liveAwsRoutes.js';
 import { rcaRouter } from './api/rcaRoutes.js';
+import { remediationRouter } from './api/remediationRoutes.js';
 import { AwsCredentialManager } from './aws/credentials.js';
 
 // Export domain types and functions for direct programmatic usage
@@ -31,6 +32,14 @@ export {
   AgentExecutionEngine,
   type DiagnosisReport,
 } from './engine/agentExecutionEngine.js';
+export * from './remediation/types.js';
+export * from './remediation/autoRemediation.js';
+export * from './remediation/policyAsCodeEngine.js';
+export * from './remediation/simulator.js';
+export {
+  SolutionEngine,
+  synthesizeRemediationPackage,
+} from './remediation/solutionEngine.js';
 
 dotenv.config();
 
@@ -51,6 +60,7 @@ export function createServer() {
   app.use('/api/scenarios', scenarioRouter);
   app.use('/api/aws', liveAwsRouter);
   app.use('/api/rca', rcaRouter);
+  app.use('/api/remediation', remediationRouter);
 
   // Status & Health Check
   app.get('/api/health', (_req, res) => {

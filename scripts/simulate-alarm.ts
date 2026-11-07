@@ -13,6 +13,8 @@ import fs from 'fs';
 import path from 'path';
 import { SampleOutageGenerator, type ScenarioType } from '../src/generator/sampleOutageGenerator.js';
 import { validateAlertPayloadContract, handoffToGargiEngine } from '../src/handoff/gargiConnector.js';
+import { runAutomatedRcaPipeline } from '../src/engine/agentExecutionEngine.js';
+import { synthesizeRemediationPackage } from '../src/remediation/solutionEngine.js';
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -20,6 +22,7 @@ function parseArgs() {
     scenario: 'rds_bottleneck' as ScenarioType,
     save: false,
     handoff: false,
+    remediate: false,
     postUrl: '',
     output: '',
   };
@@ -28,6 +31,7 @@ function parseArgs() {
     if (args[i] === '--scenario' && args[i + 1]) options.scenario = args[++i] as ScenarioType;
     else if (args[i] === '--save') options.save = true;
     else if (args[i] === '--handoff') options.handoff = true;
+    else if (args[i] === '--remediate') options.remediate = true;
     else if (args[i] === '--post' && args[i + 1]) options.postUrl = args[++i];
     else if (args[i] === '--output' && args[i + 1]) options.output = args[++i];
   }
@@ -100,11 +104,67 @@ async function main() {
     }
   }
 
-  // Handoff to Gargi's engine if requested
+  // Handoff to Gargi's engine if requested directly
   if (opts.handoff) {
     console.log(`\n🤝 Executing handoffToGargiEngine(alertPayload)...`);
     const handoff = await handoffToGargiEngine(payload);
     console.log(`✅ Handoff result:`, handoff);
+  }
+
+  // End-to-End Autonomous Remediation (Krish ➔ Gargi ➔ Sweta)
+  if (opts.remediate) {
+    console.log(`\n======================================================`);
+    console.log(`🔬 [STEP 2: GARGI] Diagnostic RCA Engine (Handoff 2)`);
+    console.log(`======================================================`);
+    const rcaReport = await runAutomatedRcaPipeline(payload);
+    console.log(`   Diagnosed Scenario:          ${rcaReport.scenarioType}`);
+    console.log(`   Failing Canvas Node:         ${rcaReport.failingNodeId}`);
+    console.log(`   AWS Resource:                ${rcaReport.awsResourceId}`);
+    console.log(`   Confidence Score:            ${Math.round(rcaReport.confidenceScore * 100)}%`);
+    console.log(`   Root Cause Summary:          ${rcaReport.rootCauseSummary}`);
+    console.log(`   Key Log Evidence:            ${rcaReport.logEvidenceLine}`);
+    console.log(`   Recommended Fix Intent:      ${rcaReport.recommendedFixIntent}`);
+    if (rcaReport.deduplicationAnalysis) {
+      console.log(`   Cascading Alarms Collapsed:  ${rcaReport.deduplicationAnalysis.cascadingAlarmsCount}`);
+    }
+
+    console.log(`\n======================================================`);
+    console.log(`🛡️ [STEP 3: SWETA] Remediation, Safety & Simulation (Handoff 3)`);
+    console.log(`======================================================`);
+    const fixPackage = await synthesizeRemediationPackage(rcaReport);
+
+    console.log(`   Guardrail Decision:          ${fixPackage.guardrailStatus}`);
+    console.log(`   3-Gate Safety Verification:`);
+    console.log(`     • Gate 1 (HCL Syntax):             ${fixPackage.safetyGateDetails.gate1SyntaxPassed ? 'PASSED ✓' : 'FAILED ✗'}`);
+    console.log(`     • Gate 2 (Zero-Destruction):       ${fixPackage.safetyGateDetails.gate2DestructionFirewallPassed ? 'PASSED ✓' : 'FAILED ✗'}`);
+    console.log(`     • Gate 3 (Security & Budget):      ${fixPackage.safetyGateDetails.gate3SecurityBudgetPassed ? 'PASSED ✓' : 'FAILED ✗'}`);
+
+    console.log(`\n   📝 Mode A — Terraform HCL Diff (GitOps PR):`);
+    fixPackage.terraformDiff.split('\n').forEach(line => {
+      console.log(`      ${line}`);
+    });
+
+    console.log(`\n   ⚡ Mode B — 1-Click AWS SDK v3 Action:`);
+    console.log(`      Service:  ${fixPackage.awsSdkAction.service.toUpperCase()}`);
+    console.log(`      Command:  ${fixPackage.awsSdkAction.command}`);
+    console.log(`      Params:   ${JSON.stringify(fixPackage.awsSdkAction.parameters, null, 2).replace(/\n/g, '\n      ')}`);
+
+    console.log(`\n   📊 Pre-Flight Telemetry Simulation:`);
+    console.log(`      Metric:   ${fixPackage.simulationResult.metricName}`);
+    console.log(`      Recovery: ${fixPackage.simulationResult.beforeValue}${fixPackage.simulationResult.unit} ➔ ${fixPackage.simulationResult.afterValue}${fixPackage.simulationResult.unit} (Threshold: ${fixPackage.simulationResult.threshold}${fixPackage.simulationResult.unit})`);
+    console.log(`      Status:   ${fixPackage.simulationResult.predictedRecoveryStatus}`);
+    console.log(`      Notes:    ${fixPackage.simulationResult.simulationNotes}`);
+
+    console.log(`\n   💵 Monthly Financial Cost Impact:`);
+    console.log(`      Delta:    ${fixPackage.costImpactMonthly.formattedDelta} (Old: $${fixPackage.costImpactMonthly.oldCostUsd.toFixed(2)}, New: $${fixPackage.costImpactMonthly.newCostUsd.toFixed(2)})`);
+
+    if (fixPackage.rollbackSnapshotConfig) {
+      console.log(`\n   💾 Rollback Safety Snapshot:`);
+      console.log(`      Action:   ${fixPackage.rollbackSnapshotConfig.action}`);
+      console.log(`      Desc:     ${fixPackage.rollbackSnapshotConfig.description}`);
+    }
+
+    console.log(`\n🎉 Autonomous Healing Verified: Ready for 1-Click Deployment!`);
   }
 
   console.log(`\n✨ Simulation completed successfully.\n`);
